@@ -1,129 +1,911 @@
-const TABLES = [
-  'locataires', 'contrats', 'loyers', 'depenses', 'paiements',
-  'caisse', 'depots', 'revenus',
-  'personnel', 'inventaire', 'archives', 'alertes'
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Centre Commercial Madina - NOVATIS</title>
+  <style>
+    :root{
+      --bg:#f4f7f5;--panel:#fff;--panel2:#f9fbfa;--ink:#17211b;--muted:#60716a;--line:#d8e2dc;
+      --green:#1f6b4a;--green2:#164b35;--mint:#dff3e9;--blue:#2563eb;--bluebg:#dbeafe;
+      --amber:#b7791f;--amberbg:#fff4d7;--red:#b42318;--redbg:#fee4df;--purple:#6d28d9;
+      --shadow:0 14px 36px rgba(21,38,30,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}
+    button,input,select,textarea{font:inherit}button{cursor:pointer}
+    .app{display:grid;grid-template-columns:276px minmax(0,1fr);min-height:100vh}
+    aside{height:100vh;position:sticky;top:0;background:#102418;color:#eef8f1;padding:18px 12px;overflow:auto}
+    .brand{display:flex;gap:12px;align-items:center;padding:8px 10px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
+    .brand-mark{width:42px;height:42px;border-radius:8px;background:#2f8b61;display:grid;place-items:center;font-weight:900}
+    .brand h1{font-size:16px;line-height:1.15;margin:0}.brand p{margin:4px 0 0;color:#adc0b5;font-size:12px}
+    .nav-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#90a397;margin:18px 10px 7px}
+    .nav-btn{width:100%;border:0;background:transparent;color:#c7d9ce;display:flex;align-items:center;gap:10px;border-radius:8px;padding:10px;margin:2px 0;text-align:left}
+    .nav-btn:hover,.nav-btn.active{background:#1b3f2c;color:#fff}.nav-ico{width:20px;text-align:center;opacity:.96}.nav-badge{margin-left:auto;background:#295b3f;color:#dff3e9;border-radius:99px;padding:2px 7px;font-size:11px}
+    .sync-pill{margin:18px 10px 4px;font-size:12px;color:#adc0b5;display:flex;align-items:center;gap:8px}.dot{width:8px;height:8px;border-radius:99px;background:#71827a}.dot.ok{background:#22c55e}.dot.warn{background:#f59e0b}.dot.err{background:#ef4444}
+    main{min-width:0}.top{min-height:66px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 26px;position:sticky;top:0;z-index:3}
+    .top h2{font-size:18px;margin:0}.top small{display:block;color:var(--muted);font-size:12px;margin-top:3px}.actions,.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:8px 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:700;font-size:13px;min-height:36px}
+    .btn:hover{border-color:#b8c8bf}.btn.primary{background:var(--green);border-color:var(--green);color:#fff}.btn.primary:hover{background:var(--green2)}
+    .btn.danger{background:var(--redbg);border-color:#f4b8b1;color:var(--red)}.btn.ghost{background:transparent}.btn.sm{min-height:30px;padding:5px 8px;font-size:12px}
+    .page{display:none;padding:24px 26px 38px}.page.active{display:block}
+    .grid{display:grid;gap:14px}.stats{grid-template-columns:repeat(4,minmax(150px,1fr));margin-bottom:18px}.split{grid-template-columns:1.08fr .92fr}.tri{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}.pad{padding:16px}
+    .stat{padding:16px}.stat span{display:block;color:var(--muted);font-size:12px}.stat strong{display:block;font-size:24px;margin-top:7px}.stat small{display:block;color:var(--muted);margin-top:5px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid var(--line);gap:10px}
+    .section-head h3{font-size:15px;margin:0}.section-head p{margin:4px 0 0;color:var(--muted);font-size:12px}.search{min-width:230px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
+    .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{background:#f9fbf9;color:#536259;font-size:12px}tr:hover td{background:#fbfdfb}
+    .badge{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:800;background:#edf2ef;color:#405047}.badge.ok{background:var(--mint);color:var(--green2)}.badge.warn{background:var(--amberbg);color:var(--amber)}.badge.err{background:var(--redbg);color:var(--red)}.badge.blue{background:var(--bluebg);color:var(--blue)}.badge.purple{background:#ede9fe;color:var(--purple)}
+    .empty{padding:30px;text-align:center;color:var(--muted)}.bar-list{padding:16px}.bar-row{display:grid;grid-template-columns:128px 1fr 92px;gap:10px;align-items:center;margin:10px 0;font-size:13px}.track{height:10px;background:#e8eee9;border-radius:99px;overflow:hidden}.fill{height:100%;background:var(--green)}
+    .alert{padding:12px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}.alert:last-child{border-bottom:0}.alert b{font-size:13px}.alert span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+    .doc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.doc-item{border:1px solid var(--line);border-radius:8px;padding:13px;background:var(--panel2)}.doc-item h4{margin:0 0 6px;font-size:14px}.doc-item p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+    .settings{max-width:1120px}.settings .card{padding:18px;margin-bottom:14px}.settings h3{margin:0 0 8px}.settings p{color:var(--muted);margin:0 0 14px;line-height:1.5}.url-row{display:grid;grid-template-columns:1fr auto auto;gap:8px}
+    .steps{counter-reset:step;display:grid;gap:8px}.step{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;color:#415048}.step:before{counter-increment:step;content:counter(step);width:24px;height:24px;border-radius:99px;background:var(--green);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:900}
+    code,pre{font-family:Consolas,Menlo,monospace}pre{white-space:pre-wrap;background:#101814;color:#dff2e8;border-radius:8px;padding:14px;max-height:390px;overflow:auto;font-size:12px}
+    .modal-back{position:fixed;inset:0;background:rgba(16,24,20,.44);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal-back.show{display:flex}.modal{width:min(820px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:8px;box-shadow:0 24px 80px rgba(0,0,0,.22)}
+    .modal header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}.modal h3{margin:0;font-size:16px}.modal form{padding:18px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field.full{grid-column:1/-1}.field label{display:block;font-size:12px;color:var(--muted);font-weight:800;margin-bottom:5px}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff}.modal footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--line)}
+    .official-wrap{overflow:auto}.official-title{background:#17203c;color:#ff4d6d;text-align:center;font-weight:900;letter-spacing:.03em;padding:6px 10px}.official-sub{background:#24557d;color:#fff;text-align:center;font-size:11px;padding:3px}.official-table{font-size:11px}.official-table th{background:#10162d;color:#ff4d6d;border-color:#8b95a8;text-align:center}.official-table td{padding:5px 4px;border-color:#cbd3df}.official-table .money-cell{color:#001dff;font-weight:800;text-align:right}.official-table .rent-out{background:#e8f4e2;color:#111;text-align:right}.official-table .vacant{color:#e11d48;font-weight:800}.official-table .occupied{color:#16a34a;font-weight:800}
+    .expense-title{background:#17192d;color:#ff4d6d;text-align:center;font-weight:900;font-size:20px;letter-spacing:.04em;padding:14px 10px}.expense-sub{background:#174a78;color:#fff;text-align:center;font-weight:800;padding:6px}.expense-table th{background:#ef4638;color:#fff;text-align:center;font-size:15px}.expense-table td{font-size:14px;padding:6px 4px}.expense-table td.month{background:#e7f2df}.expense-table td.cat,.expense-table td.amount{color:#ff342e;font-weight:900}.expense-table td.amount{text-align:right}
+    .receipt-modal{width:min(1120px,100%)}.receipt-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-bottom:1px solid var(--line)}.receipt{background:#fff;color:#00143b;border:1px solid #9ba7b5;margin:0 auto 18px;width:min(100%,1050px);font-family:Arial,sans-serif}.receipt table{border-collapse:collapse;width:100%;font-size:16px}.receipt td,.receipt th{border:1px solid #a7b0bb;padding:5px 7px;white-space:normal}.receipt .r-blue{background:#23567f;color:#fff;font-weight:900}.receipt .r-dark{background:#10233b;color:#fff}.receipt .r-title{font-size:28px;text-align:center;letter-spacing:.04em}.receipt .r-logo{width:200px;text-align:center;color:#10233b;font-weight:900;font-size:28px;line-height:1}.receipt .r-red{background:#d60000;color:#fff;font-weight:900}.receipt .r-id{background:#fff7d1;color:#c00;font-weight:900;font-size:26px;text-align:center}.receipt .r-section{text-align:center;font-weight:900}.receipt .r-note{font-style:italic;text-align:center}.receipt .r-label{font-weight:800}.receipt .r-amount{text-align:right;font-size:18px}.receipt .r-yellow{background:#fff3c6;color:#001dff}.receipt .r-total{background:#23567f;color:#fff;font-weight:900;text-align:right}.receipt .r-sign{height:96px;vertical-align:top;text-align:center}.receipt .r-footer{background:#0f5a91;color:#fff;text-align:center;padding:9px;font-size:15px}
+    .toast{position:fixed;right:18px;bottom:18px;display:grid;gap:8px;z-index:40}.toast div{background:#102418;color:#fff;border-radius:8px;padding:11px 13px;box-shadow:var(--shadow);font-size:13px}
+    .lock-screen{position:fixed;inset:0;background:#102418;color:#fff;z-index:80;display:none;align-items:center;justify-content:center;padding:20px}.lock-screen.show{display:flex}.lock-box{width:min(420px,100%);background:#fff;color:var(--ink);border-radius:8px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.28)}.lock-box h2{margin:0 0 8px}.lock-box p{color:var(--muted);margin:0 0 14px}.lock-box input{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px}
+    @media print{body *{visibility:hidden}.modal-back.show,.modal-back.show *{visibility:visible}.modal-back.show{position:absolute;inset:0;background:#fff;padding:0;display:block}.modal{box-shadow:none;max-height:none;width:100%;overflow:visible}.modal header,.receipt-actions{display:none}.receipt{width:100%;border:0;margin:0}.receipt table{font-size:14px}.toast{display:none}}
+    @media(max-width:980px){.app{grid-template-columns:1fr}aside{position:relative;height:auto}.stats,.split,.tri,.doc-grid{grid-template-columns:1fr}.top{position:relative;align-items:flex-start}.url-row{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.page{padding:16px}.bar-row{grid-template-columns:1fr}.search{min-width:0;width:100%}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><div class="brand-mark">M</div><div><h1>Centre Commercial Madina</h1><p>NOVATIS GLOBAL - Gestion complÃ¨te</p></div></div>
+    <nav id="nav"></nav>
+    <div class="sync-pill"><span id="syncDot" class="dot"></span><span id="syncText">Mode local actif</span></div>
+  </aside>
+  <main>
+    <div class="top">
+      <div><h2 id="pageTitle">Tableau de bord</h2><small id="pageSub">Pilotage consolidÃ© du centre commercial</small></div>
+      <div class="actions">
+        <button class="btn" id="exportJsonBtn">Exporter JSON</button>
+        <label class="btn admin-only">Importer JSON<input id="importJson" type="file" accept="application/json,.json" hidden></label>
+        <button class="btn" id="exportExcelBtn">Exporter Excel</button>
+        <label class="btn admin-only">Importer Excel<input id="importExcel" type="file" accept=".xls,.html,text/html,application/vnd.ms-excel" hidden></label>
+        <button class="btn" id="loadSheetsBtn">Charger Sheets</button>
+        <button class="btn primary admin-only" id="syncBtn">Sync Google Sheets</button>
+      </div>
+    </div>
+    <section id="dashboard" class="page active"></section>
+    <section id="modulePage" class="page"></section>
+    <section id="impayes" class="page"></section>
+    <section id="reports" class="page"></section>
+    <section id="documentation" class="page settings"></section>
+    <section id="settings" class="page settings"></section>
+  </main>
+</div>
+<div class="modal-back" id="modalBack"><div class="modal" id="modal"></div></div>
+<div class="lock-screen" id="lockScreen"><div class="lock-box"><h2>AccÃ¨s sÃ©curisÃ©</h2><p>Admin: modification complÃ¨te. Lecteur: consultation seule.</p><input id="lockPassword" type="password" placeholder="Mot de passe admin ou lecteur"><div class="actions"><button class="btn primary" id="unlockBtn">DÃ©verrouiller</button><button class="btn" id="resetAccessBtn">RÃ©initialiser accÃ¨s</button></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE='madina_gestion_complete_v2';
+const URL_KEY='madina_apps_script_url_v2';
+const ADMIN_KEY='madina_admin_unlocked_v2';
+const ROLE_KEY='madina_user_role_v2';
+const PASS_KEY='madina_admin_password_v2';
+const VIEWER_PASS_KEY='madina_viewer_password_v2';
+const DEFAULT_PASS='1234';
+const DEFAULT_VIEWER_PASS='0000';
+const CURRENT_YEAR=new Date().getFullYear();
+const CURRENT_MONTH=String(new Date().getMonth()+1).padStart(2,'0');
+
+const MODULES=[
+  {id:'locataires',group:'Espaces & locataires',icon:'ðŸ‘¥',title:'Locataires',sub:'Fiches commerÃ§ants, contacts, activitÃ©, solvabilitÃ© et conformitÃ©.',key:'nom',fields:[
+    ['nom','Nom officiel','text'],['commerce','Nom commercial','text'],['telephone','TÃ©lÃ©phone','text'],['email','Email','email'],['activite','ActivitÃ©','text'],['piece','PiÃ¨ce identitÃ©','text'],['adresse','Adresse','textarea'],['statut','Statut','select','Actif|Prospect|Suspendu|Sorti'],['risque','Risque','select','Faible|Moyen|Ã‰levÃ©']
+  ]},
+  {id:'contrats',group:'Espaces & locataires',icon:'ðŸ“„',title:'Contrats',sub:'Baux, dates dâ€™Ã©chÃ©ance, cautions, renouvellements et conformitÃ© documentaire.',key:'numero',fields:[
+    ['numero','NÂ° contrat','text'],['boutiqueCode','Boutique','text'],['locataire','Locataire','text'],['dateDebut','DÃ©but','date'],['dateFin','Fin','date'],['montantLoyer','Loyer','money'],['caution','Caution','money'],['renouvellement','Renouvellement','select','Automatique|Ã€ nÃ©gocier|Non'],['statut','Statut','select','Actif|Ã€ renouveler|ExpirÃ©|RÃ©siliÃ©'],['notes','Notes','textarea']
+  ]},
+  {id:'loyers',group:'Finances',icon:'ðŸ’°',title:'Loyers',sub:'Appels mensuels, suivi du dÃ», encaissÃ©, solde et relances.',key:'boutiqueCode',fields:[
+    ['boutiqueCode','Boutique','text'],['locataire','Locataire','text'],['mois','Mois','month'],['montant','Montant dÃ»','money'],['paye','PayÃ©','money'],['solde','Solde','money'],['statut','Statut','select','PayÃ©|Partiel|ImpayÃ©|En retard'],['datePaiement','Date paiement','date'],['modePaiement','Mode','select','EspÃ¨ces|Orange Money|Virement|ChÃ¨que|Autre'],['reference','RÃ©fÃ©rence','text'],['notes','Notes','textarea']
+  ]},
+  {id:'depenses',group:'Finances',icon:'ðŸ“‰',title:'DÃ©penses',sub:'Registre des sorties de caisse autorisÃ©es et enregistrÃ©es pour le centre commercial.',key:'description',fields:[
+    ['date','Date','date'],['mois','Mois','text'],['annee','AnnÃ©e','number'],['categorie','CatÃ©gorie','select','Nettoyage|SÃ©curitÃ©|Maintenance|Ã‰lectricitÃ©|Eau|Administration|Autre'],['sousCategorie','Sous_CatÃ©gorie','text'],['description','Description','text'],['montant','Montant_GNF','money'],['modePaiement','Mode_Paiement','select','Cash|Virement|Orange Money|ChÃ¨que|Autre'],['payeA','PayÃ©_Ã ','text'],['autorisePar','AutorisÃ©_par','text'],['collecteur','Collecteur','text'],['notes','Notes','textarea']
+  ]},
+  {id:'paiements',group:'Finances',icon:'ðŸ§¾',title:'Paiements & reÃ§us',sub:'Journal des encaissements avec reÃ§u de paiement imprimable pour chaque rÃ¨glement.',key:'reference',fields:[
+    ['date','Date','date'],['reference','ID du reÃ§u','text'],['periode','Loyer du / pÃ©riode','month'],['source','Source','select','Loyer|PÃ©nalitÃ©|Parking|Toilettes|Affichage|Location temporaire|Ã‰vÃ©nement|Autre'],['boutiqueCode','Code espace / ID loyer','text'],['payeur','Nom locataire officiel','text'],['occupantReel','Occupant rÃ©el','text'],['telephone','TÃ©lÃ©phone','text'],['nomCommercial','Nom commercial','text'],['activite','ActivitÃ© principale','text'],['typeEspace','Type espace','select','Boutique|Conteneur|Table|Kiosque|Autre'],['zone','Zone','text'],['surface','Surface mÂ²','number'],['loyer','Loyer','money'],['arrieres','ArriÃ©rÃ©s de loyer','money'],['penalites','PÃ©nalitÃ©s de retard','money'],['fraisSecurite','Frais de sÃ©curitÃ©','money'],['fraisAssainissement','Frais dâ€™assainissement','money'],['autres','Autres frais','money'],['montant','Montant payÃ©','money'],['mode','Mode paiement','select','EspÃ¨ces|Virement|Orange Money|ChÃ¨que|Autre'],['referencePaiement','RÃ©fÃ©rence paiement','text'],['collecteur','Collecteur','text'],['statut','Statut','select','ConfirmÃ©|Ã€ vÃ©rifier|AnnulÃ©'],['notes','Notes','textarea']
+  ]},
+  {id:'caisse',group:'Finances',icon:'ðŸ¦',title:'Caisse',sub:'ContrÃ´le journalier du cash, Ã©carts, caissiers et clÃ´tures.',key:'date',fields:[
+    ['date','Date','date'],['caissier','Caissier','text'],['soldeOuverture','Solde ouverture','money'],['entrees','EntrÃ©es','money'],['sorties','Sorties','money'],['soldeTheorique','Solde thÃ©orique','money'],['cashReel','Cash rÃ©el','money'],['ecart','Ã‰cart','money'],['statut','Statut','select','Conforme|Ã‰cart Ã  justifier|ClÃ´turÃ©'],['notes','Notes','textarea']
+  ]},
+  {id:'depots',group:'Finances',icon:'ðŸ›ï¸',title:'DÃ©pÃ´ts bancaires',sub:'Bordereaux, dÃ©pÃ´ts prÃ©parÃ©s, rapprochement banque et statut de validation.',key:'reference',fields:[
+    ['date','Date','date'],['reference','RÃ©fÃ©rence dÃ©pÃ´t','text'],['banque','Banque','text'],['montant','Montant','money'],['deposant','DÃ©posant','text'],['statut','Statut','select','PrÃ©parÃ©|DÃ©posÃ©|ConfirmÃ©|Ã‰cart'],['notes','Notes','textarea']
+  ]},
+  {id:'revenus',group:'Revenus annexes',icon:'ðŸ’Ž',title:'Autres revenus',sub:'Parking, toilettes, affichage, pÃ©nalitÃ©s et recettes diverses.',key:'source',fields:[
+    ['date','Date','date'],['source','Source','select','Parking|Toilettes|Affichage|Location temporaire|Ã‰vÃ©nement|PÃ©nalitÃ©|Divers'],['description','Description','text'],['client','Client / source','text'],['zone','Zone','text'],['montant','Montant','money'],['mode','Mode paiement','select','EspÃ¨ces|Orange Money|Virement|ChÃ¨que|Autre'],['reference','RÃ©fÃ©rence','text'],['collecteur','Collecteur','text'],['statut','Statut','select','ConfirmÃ©|Ã€ vÃ©rifier|AnnulÃ©'],['notes','Notes','textarea']
+  ]},
+  {id:'personnel',group:'Ressources',icon:'ðŸ‘”',title:'Personnel',sub:'Ã‰quipe opÃ©rationnelle, rÃ´les, accÃ¨s, responsabilitÃ©s et statut.',key:'nom',fields:[
+    ['nom','Nom','text'],['role','RÃ´le','text'],['telephone','TÃ©lÃ©phone','text'],['niveauAcces','AccÃ¨s','select','Lecture|Collecte|Finance|Gestionnaire|Admin'],['salaire','Salaire','money'],['statut','Statut','select','Actif|CongÃ©|Suspendu|Sorti'],['notes','Notes','textarea']
+  ]},
+  {id:'inventaire',group:'Espaces & locataires',icon:'ðŸª',title:'Inventaire officiel',sub:'Registre unique des espaces commerciaux : Boutique, Conteneur, Table, Kiosque et Autre.',key:'idInventaire',fields:[
+    ['idInventaire','ID Inventaire','text'],['codeEspace','Code Espace','text'],['typeEspace','Type Espace','select','Boutique|Conteneur|Table|Kiosque|Autre'],['categorie','CatÃ©gorie','text'],['zone','Zone','text'],['bloc','Bloc','text'],['allee','AllÃ©e','text'],['repereVisuel','RepÃ¨re Visuel','text'],['surface','Surface mÂ²','number'],['loyerMensuel','Loyer_Mensuel (GNF)','money'],['nomLocataireOfficiel','Nom_Locataire Officiel','text'],['sousLocation','Sous_Location','select','Non|Oui'],['nomOccupantReel','Nom_Occupant RÃ©el','text'],['nomCommercial','Nom Commercial','text'],['activite','ActivitÃ©','text'],['telephone','TÃ©lÃ©phone','text'],['pieceId','PiÃ¨ce ID','text'],['statut','Statut','select','OccupÃ©|Vacant|RÃ©servÃ©|Maintenance'],['etatEspace','Ã‰tat_Espace','select','Bon|Moyen|Ã€ rÃ©parer|Hors service'],['occupationConforme','Occupation Conforme','select','Oui|Non'],['signature','Signature','select','Oui|Non'],['dateInventaire','Date_Inventaire','date'],['typeAnomalie','Type_Anomalie','select','RAS|Occupant absent|En retard|Sous-location|Document manquant|Autre'],['observations','Observations','textarea'],['loyerAuto','Loyer Auto GNF','money']
+  ]},
+  {id:'archives',group:'Administration',icon:'ðŸ—‚ï¸',title:'Archives',sub:'Coffre administratif lÃ©ger : contrats, piÃ¨ces, reÃ§us, factures, courriers et preuves.',key:'titre',fields:[
+    ['titre','Titre','text'],['type','Type','select','Contrat|Facture|ReÃ§u|PiÃ¨ce identitÃ©|Rapport|Autre'],['reference','RÃ©fÃ©rence','text'],['date','Date','date'],['lieA','LiÃ© Ã ','text'],['statut','Statut','select','Complet|Ã€ complÃ©ter|ArchivÃ©'],['url','Lien fichier','url'],['fichierNom','Nom document','text'],['fichierData','Document uploadÃ©','file'],['notes','Notes','textarea']
+  ]},
+  {id:'alertes',group:'Pilotage',icon:'ðŸ””',title:'Alertes',sub:'Relances, Ã©chÃ©ances, anomalies, risques et actions Ã  suivre.',key:'titre',fields:[
+    ['date','Date','date'],['titre','Titre','text'],['module','Module','text'],['niveau','Niveau','select','Info|Suivi|Urgent|Critique'],['responsable','Responsable','text'],['echeance','Ã‰chÃ©ance','date'],['statut','Statut','select','Ouverte|En cours|TraitÃ©e|IgnorÃ©e'],['details','DÃ©tails','textarea']
+  ]},
+  {id:'audit',group:'Administration',icon:'A',title:'Journal audit',sub:'Historique des creations, modifications, suppressions, clotures et imports.',key:'date',fields:[
+    ['date','Date','datetime-local'],['action','Action','text'],['module','Module','text'],['rowId','ID ligne','text'],['utilisateur','Utilisateur','text'],['details','Details','textarea']
+  ]}
 ];
 
-const HEADERS = {
-  locataires: ['id','nom','commerce','telephone','email','activite','piece','adresse','statut','risque'],
-  contrats: ['id','numero','boutiqueCode','locataire','dateDebut','dateFin','montantLoyer','caution','renouvellement','statut','notes'],
-  loyers: ['id','boutiqueCode','locataire','mois','montant','paye','solde','statut','datePaiement','modePaiement','reference','notes'],
-  depenses: ['id','date','mois','annee','categorie','sousCategorie','description','montant','modePaiement','payeA','autorisePar','collecteur','notes'],
-  paiements: ['id','date','reference','periode','source','boutiqueCode','payeur','occupantReel','telephone','nomCommercial','activite','typeEspace','zone','surface','loyer','arrieres','penalites','fraisSecurite','fraisAssainissement','autres','montant','mode','referencePaiement','collecteur','statut','notes'],
-  caisse: ['id','date','caissier','soldeOuverture','entrees','sorties','soldeTheorique','cashReel','ecart','statut','notes'],
-  depots: ['id','date','reference','banque','montant','deposant','statut','notes'],
-  revenus: ['id','date','source','description','client','zone','montant','mode','reference','collecteur','statut','notes'],
-  personnel: ['id','nom','role','telephone','niveauAcces','salaire','statut','notes'],
-  inventaire: ['id','idInventaire','codeEspace','typeEspace','categorie','zone','bloc','allee','repereVisuel','surface','loyerMensuel','nomLocataireOfficiel','sousLocation','nomOccupantReel','nomCommercial','activite','telephone','pieceId','statut','etatEspace','occupationConforme','signature','dateInventaire','typeAnomalie','observations','loyerAuto'],
-  archives: ['id','titre','type','reference','date','lieA','statut','url','notes'],
-  alertes: ['id','date','titre','module','niveau','responsable','echeance','statut','details']
+const NAV_EXTRA=[
+  {id:'dashboard',group:'Pilotage',icon:'ðŸ“Š',title:'Tableau de bord',sub:'Pilotage consolidÃ© du centre commercial'},
+  {id:'reports',group:'Pilotage',icon:'ðŸ“ˆ',title:'Rapports & statistiques',sub:'Analyse financiÃ¨re, occupation et recouvrement'},
+  {id:'documentation',group:'SystÃ¨me',icon:'ðŸ“š',title:'Documentation modules',sub:'Cahier des charges opÃ©rationnel intÃ©grÃ©'},
+  {id:'settings',group:'SystÃ¨me',icon:'âš™ï¸',title:'ParamÃ¨tres & backend',sub:'Google Sheets, sauvegarde et Apps Script'}
+];
+const ALL_NAV=[NAV_EXTRA[0],...MODULES,NAV_EXTRA[1],NAV_EXTRA[2],NAV_EXTRA[3]];
+const TABLES=MODULES.map(m=>m.id);
+const MODULE_MAP=Object.fromEntries(MODULES.map(m=>[m.id,m]));
+const ID_PREFIX={
+  locataires:'LOC',contrats:'CTR',loyers:'LOY',depenses:'DEP',paiements:'PAY',caisse:'CAI',
+  depots:'DPT',revenus:'REV',personnel:'PER',inventaire:'INV',archives:'ARC',alertes:'ALT'
 };
+ID_PREFIX.audit='AUD';
+ALL_NAV.splice(1,0,{id:'impayes',group:'Pilotage',icon:'!',title:'Impayes & relances',sub:'Liste dediee des soldes ouverts et actions de relance'});
+let state=loadState();
+let currentPage='dashboard';
+let currentModule='inventaire';
+let search='';
+let syncTimer=null;
+let syncing=false;
+recalculateAll();
 
-function doGet(e) {
-  try {
-    const action = (e.parameter.action || 'loadAll');
-    if (action === 'ping') {
-      return output_({ ok: true, message: 'Backend Madina actif', at: new Date().toISOString() }, e);
+function uid(prefix='id'){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7)}
+function cleanId(moduleId,row=null){return friendlyId(moduleId,row)}
+function today(){return new Date().toISOString().slice(0,10)}
+function monthNow(){return CURRENT_YEAR+'-'+CURRENT_MONTH}
+function n(v){return Number(v||0)||0}
+function money(v){return n(v).toLocaleString('fr-FR')+' GNF'}
+function fmt(v){return n(v).toLocaleString('fr-FR')}
+function pct(v){return Math.round((Number(v)||0)*100)+'%'}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function moduleRows(id){return Array.isArray(state.db[id])?state.db[id]:[]}
+function save(recalc=true,autoSync=true){if(recalc)recalculateAll();state.updatedAt=new Date().toISOString();localStorage.setItem(STORE,JSON.stringify(state));renderSyncInfo();if(autoSync)queueAutoSync()}
+function toast(msg){const box=document.getElementById('toast');const el=document.createElement('div');el.textContent=msg;box.appendChild(el);setTimeout(()=>el.remove(),3200)}
+function currentRole(){return sessionStorage.getItem(ROLE_KEY)||''}
+function canEdit(){return currentRole()==='admin'}
+function requireAdmin(action='modifier les donnÃ©es'){if(canEdit())return true;toast('Mode lecteur: vous pouvez consulter, mais pas '+action+'.');return false}
+function roleLabel(){return canEdit()?'Admin':'Lecteur'}
+function applyRoleUi(){
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=canEdit()?'':'none');
+}
+function isTechnicalId(value){
+  return !value || /^[a-z]{1,4}_[a-z0-9]+_[a-z0-9]+$/i.test(String(value));
+}
+function friendlyId(moduleId,row=null){
+  const prefix=ID_PREFIX[moduleId]||moduleId.slice(0,3).toUpperCase();
+  const rows=moduleRows(moduleId);
+  const used=new Set(rows.map(r=>String(r.id||'')));
+  let n=rows.reduce((max,r)=>{
+    const match=String(r.id||'').match(new RegExp('^'+prefix+'-(\\d+)$'));
+    return match?Math.max(max,Number(match[1])):max;
+  },0)+1;
+  let id;
+  do{id=prefix+'-'+String(n++).padStart(4,'0')}while(used.has(id) && (!row || row.id!==id));
+  return id;
+}
+function repairIds(){
+  TABLES.forEach(moduleId=>{
+    moduleRows(moduleId).forEach(row=>{
+      if(isTechnicalId(row.id))row.id=friendlyId(moduleId,row);
+    });
+  });
+}
+function audit(action,moduleId,rowId,details=''){
+  if(moduleId==='audit')return;
+  if(!Array.isArray(state.db.audit))state.db.audit=[];
+  state.db.audit.push({id:friendlyId('audit'),date:new Date().toISOString().slice(0,16),action,module:moduleId,rowId:rowId||'',utilisateur:'Admin',details:String(details||'').slice(0,900)});
+}
+function requiredFields(moduleId){
+  return {
+    locataires:['nom','telephone','statut'],
+    contrats:['numero','boutiqueCode','locataire','dateDebut','dateFin','montantLoyer','statut'],
+    loyers:['boutiqueCode','locataire','mois','montant','statut'],
+    depenses:['date','categorie','description','montant','modePaiement'],
+    paiements:['date','reference','periode','boutiqueCode','payeur','montant','mode','statut'],
+    caisse:['date','caissier','soldeOuverture','cashReel','statut'],
+    depots:['date','reference','banque','montant','statut'],
+    revenus:['date','source','montant','mode','statut'],
+    inventaire:['idInventaire','codeEspace','typeEspace','loyerMensuel','statut'],
+    personnel:['nom','role','statut']
+  }[moduleId]||[];
+}
+function duplicateMessage(moduleId,data,rowId=''){
+  const rows=moduleRows(moduleId).filter(r=>r.id!==rowId);
+  const same=(a,b)=>String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();
+  if(moduleId==='loyers' && rows.some(r=>same(r.boutiqueCode,data.boutiqueCode)&&same(r.mois,data.mois)))return 'Doublon: meme boutique et meme mois dans les loyers.';
+  if(moduleId==='paiements' && rows.some(r=>same(r.reference,data.reference)))return 'Doublon: ce numero de recu existe deja.';
+  if(moduleId==='locataires' && rows.some(r=>same(r.nom,data.nom)||same(r.telephone,data.telephone)))return 'Doublon: meme locataire ou meme telephone.';
+  if(moduleId==='inventaire' && rows.some(r=>same(r.codeEspace,data.codeEspace)||same(r.idInventaire,data.idInventaire)))return 'Doublon: meme espace ou meme ID inventaire.';
+  return '';
+}
+function validateRecord(moduleId,data,rowId=''){
+  const positiveMoney={
+    loyers:['montant'],depenses:['montant'],paiements:['montant'],depots:['montant'],revenus:['montant'],inventaire:['loyerMensuel'],contrats:['montantLoyer']
+  }[moduleId]||[];
+  const missing=requiredFields(moduleId).filter(k=>data[k]===undefined||data[k]===null||String(data[k]).trim()==='');
+  if(missing.length)return 'Champs obligatoires manquants ou invalides: '+missing.join(', ');
+  const invalidMoney=positiveMoney.filter(k=>n(data[k])<=0);
+  if(invalidMoney.length)return 'Montant obligatoire invalide: '+invalidMoney.join(', ');
+  return duplicateMessage(moduleId,data,rowId);
+}
+function queueAutoSync(){
+  if(!canEdit())return;
+  const url=localStorage.getItem(URL_KEY);
+  if(!url||syncing)return;
+  renderSyncInfo('Modifications locales, auto-sync en attente');
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>syncSheets(false),2500);
+}
+
+function seed(){
+  const espacesDemo=[
+    {id:uid('b'),code:'A-01',nom:'Boutique A-01',secteur:'Aile A',type:'Boutique',surface:18,locataire:'Alpha Mode',telephone:'+224 620 10 10 10',loyer:2800000,caution:5600000,statut:'OccupÃ©e',notes:'EntrÃ©e principale'},
+    {id:uid('b'),code:'A-02',nom:'Boutique A-02',secteur:'Aile A',type:'Boutique',surface:16,locataire:'Diallo Services',telephone:'+224 621 11 11 11',loyer:2500000,caution:5000000,statut:'OccupÃ©e',notes:''},
+    {id:uid('b'),code:'B-07',nom:'Kiosque B-07',secteur:'Aile B',type:'Kiosque',surface:9,locataire:'',telephone:'',loyer:1200000,caution:2400000,statut:'Libre',notes:'Disponible'},
+    {id:uid('b'),code:'C-12',nom:'Espace C-12',secteur:'Aile C',type:'Autre',surface:25,locataire:'Madina Ã‰lectronique',telephone:'+224 622 12 12 12',loyer:3600000,caution:7200000,statut:'OccupÃ©e',notes:''}
+  ];
+  const db={};
+  TABLES.forEach(t=>db[t]=[]);
+  db.locataires=espacesDemo.filter(b=>b.locataire).map(b=>({id:uid('l'),nom:b.locataire,commerce:b.locataire,telephone:b.telephone,email:'',activite:b.type==='Autre'?'Ã‰lectronique':'Commerce gÃ©nÃ©ral',piece:'',adresse:'Madina, Conakry',statut:'Actif',risque:'Faible'}));
+  db.contrats=espacesDemo.filter(b=>b.locataire).map((b,i)=>({id:uid('c'),numero:'CTR-'+String(i+1).padStart(4,'0'),boutiqueCode:b.code,locataire:b.locataire,dateDebut:CURRENT_YEAR+'-01-01',dateFin:(CURRENT_YEAR+1)+'-01-01',montantLoyer:b.loyer,caution:b.caution,renouvellement:'Ã€ nÃ©gocier',statut:'Actif',notes:''}));
+  db.loyers=espacesDemo.filter(b=>b.locataire).map((b,i)=>({id:uid('r'),boutiqueCode:b.code,locataire:b.locataire,mois:monthNow(),montant:b.loyer,paye:i===1?1200000:b.loyer,solde:i===1?b.loyer-1200000:0,statut:i===1?'Partiel':'PayÃ©',datePaiement:today(),modePaiement:'EspÃ¨ces',reference:'REC-'+String(i+1).padStart(4,'0'),notes:''}));
+  db.depenses=[
+    {id:uid('de'),date:'2026-04-01',mois:'April 2026',annee:2026,categorie:'Nettoyage',sousCategorie:'Produits',description:'Entretien du site',montant:100000,modePaiement:'Cash',payeA:'Fournisseur X',autorisePar:'Boss',collecteur:'Alpha',notes:''},
+    {id:uid('de'),date:'2026-04-01',mois:'April 2026',annee:2026,categorie:'SÃ©curitÃ©',sousCategorie:'Gardiennage',description:'Ronde du site',montant:80000,modePaiement:'Virement',payeA:'Agent S',autorisePar:'Boss',collecteur:'',notes:''},
+    {id:uid('de'),date:'2026-04-02',mois:'April 2026',annee:2026,categorie:'Maintenance',sousCategorie:'RÃ©paration',description:'RÃ©paration serrure',montant:60000,modePaiement:'Cash',payeA:'Technicien Y',autorisePar:'Boss',collecteur:'Alpha',notes:''},
+    {id:uid('de'),date:'2026-05-15',mois:'May 2026',annee:2026,categorie:'Nettoyage',sousCategorie:'Produits',description:'Entretien mensuel',montant:120000,modePaiement:'Cash',payeA:'Fournisseur X',autorisePar:'Boss',collecteur:'Alpha',notes:''},
+    {id:uid('de'),date:'2026-05-15',mois:'May 2026',annee:2026,categorie:'Ã‰lectricitÃ©',sousCategorie:'Facture EDG',description:'Facture Ã©lectricitÃ©',montant:450000,modePaiement:'Virement',payeA:'EDG GuinÃ©e',autorisePar:'Boss',collecteur:'',notes:''}
+  ];
+  db.paiements=db.loyers.map(r=>{
+    const b=espacesDemo.find(x=>x.code===r.boutiqueCode)||{};
+    return {id:uid('p'),date:r.datePaiement,reference:r.reference,periode:r.mois,source:'Loyer',boutiqueCode:r.boutiqueCode,payeur:r.locataire,occupantReel:r.locataire,telephone:b.telephone||'',nomCommercial:b.locataire||'',activite:b.type==='Autre'?'Ã‰lectro mÃ©nager':'Commerce divers',typeEspace:normalizeSpaceType(b.type||'Boutique'),zone:b.secteur||'',surface:b.surface||0,loyer:r.montant,arrieres:0,penalites:0,fraisSecurite:0,fraisAssainissement:0,autres:0,montant:r.paye,mode:r.modePaiement,referencePaiement:r.reference,collecteur:'Alpha',statut:'ConfirmÃ©',notes:''};
+  });
+  db.caisse=[{id:uid('ca'),date:today(),caissier:'Alpha',soldeOuverture:500000,entrees:sum(db.paiements,'montant'),sorties:1500000,soldeTheorique:sum(db.paiements,'montant')-1000000,cashReel:sum(db.paiements,'montant')-1000000,ecart:0,statut:'Conforme',notes:''}];
+  db.depots=[{id:uid('d'),date:today(),reference:'BAN-0001',banque:'BDG',montant:3000000,deposant:'Alpha',statut:'PrÃ©parÃ©',notes:''}];
+  db.revenus=[
+    {id:uid('rv'),date:today(),source:'Parking',description:'Recette parking jour',client:'Usagers parking',zone:'ExtÃ©rieur',montant:450000,mode:'EspÃ¨ces',reference:'REV-0001',collecteur:'Alpha',statut:'ConfirmÃ©',notes:''},
+    {id:uid('rv'),date:today(),source:'Location temporaire',description:'Location stand promotionnel',client:'Expo temporaire',zone:'Galerie',montant:900000,mode:'EspÃ¨ces',reference:'REV-0002',collecteur:'Alpha',statut:'ConfirmÃ©',notes:''}
+  ];
+  db.personnel=[{id:uid('pe'),nom:'Alpha',role:'Caissier / collecteur',telephone:'+224 624 00 00 00',niveauAcces:'Finance',salaire:2500000,statut:'Actif',notes:''}];
+  db.inventaire=[
+    {id:uid('i'),idInventaire:'INV-0001',codeEspace:'B12',typeEspace:'Boutique',categorie:'Boutique standard',zone:'Zone A',bloc:'',allee:'AllÃ©e 1',repereVisuel:'PrÃ¨s entrÃ©e principale',surface:12,loyerMensuel:1500000,nomLocataireOfficiel:'Alpha Diallo',sousLocation:'Non',nomOccupantReel:'Alpha Diallo',nomCommercial:'Boutique Alpha',activite:'Commerce divers',telephone:'+224 000 00 00 01',pieceId:'CNI-001',statut:'OccupÃ©',etatEspace:'Bon',occupationConforme:'Oui',signature:'Oui',dateInventaire:'2026-05-15',typeAnomalie:'RAS',observations:'',loyerAuto:1500000},
+    {id:uid('i'),idInventaire:'INV-0002',codeEspace:'C01',typeEspace:'Conteneur',categorie:'Conteneur 2m',zone:'Zone B',bloc:'',allee:'AllÃ©e 2',repereVisuel:'Face toilettes',surface:2,loyerMensuel:500000,nomLocataireOfficiel:'Mariam Bah',sousLocation:'Non',nomOccupantReel:'Mariam Bah',nomCommercial:'MB Vente',activite:'Accessoires',telephone:'+224 000 00 00 02',pieceId:'CNI-002',statut:'OccupÃ©',etatEspace:'Moyen',occupationConforme:'Oui',signature:'Oui',dateInventaire:'2026-05-15',typeAnomalie:'RAS',observations:'',loyerAuto:500000},
+    {id:uid('i'),idInventaire:'INV-0003',codeEspace:'T05',typeEspace:'Table',categorie:'Mobile',zone:'Zone C',bloc:'',allee:'AllÃ©e 3',repereVisuel:'MarchÃ© central',surface:1,loyerMensuel:150000,nomLocataireOfficiel:'',sousLocation:'Non',nomOccupantReel:'',nomCommercial:'',activite:'',telephone:'',pieceId:'CNI-003',statut:'Vacant',etatEspace:'Bon',occupationConforme:'Oui',signature:'Non',dateInventaire:'2026-05-15',typeAnomalie:'RAS',observations:'Espace vacant au passage',loyerAuto:150000},
+    {id:uid('i'),idInventaire:'INV-0004',codeEspace:'B01',typeEspace:'Boutique',categorie:'Boutique standard',zone:'Zone D',bloc:'',allee:'AllÃ©e 4',repereVisuel:'MarchÃ© central',surface:15,loyerMensuel:2000000,nomLocataireOfficiel:'Oumar Keita',sousLocation:'Non',nomOccupantReel:'Oumar Keita',nomCommercial:'Keita Boutique',activite:'Ã‰lectro mÃ©nager',telephone:'+224 000 00 00 04',pieceId:'CNI-004',statut:'OccupÃ©',etatEspace:'Bon',occupationConforme:'Oui',signature:'Oui',dateInventaire:'2026-05-16',typeAnomalie:'Occupant absent',observations:'',loyerAuto:2000000},
+    {id:uid('i'),idInventaire:'INV-0005',codeEspace:'B06',typeEspace:'Boutique',categorie:'Boutique standard',zone:'Zone D',bloc:'',allee:'AllÃ©e 5',repereVisuel:'MarchÃ© central',surface:12,loyerMensuel:4000000,nomLocataireOfficiel:'Karim Camara',sousLocation:'Non',nomOccupantReel:'Karim Camara',nomCommercial:'Camara Boutique',activite:'Ã‰lectro mÃ©nager',telephone:'+224 000 00 00 05',pieceId:'CNI-005',statut:'OccupÃ©',etatEspace:'Bon',occupationConforme:'Oui',signature:'Oui',dateInventaire:'2026-05-17',typeAnomalie:'Occupant absent',observations:'',loyerAuto:4000000}
+  ];
+  db.archives=[{id:uid('arc'),titre:'Contrat Alpha Mode',type:'Contrat',reference:'CTR-0001',date:today(),lieA:'A-01',statut:'Complet',url:'',fichierNom:'',fichierData:'',notes:''}];
+  db.alertes=[{id:uid('al'),date:today(),titre:'Loyer partiel Diallo Services',module:'Loyers',niveau:'Urgent',responsable:'Gestionnaire',echeance:today(),statut:'Ouverte',details:'Solde restant Ã  relancer.'}];
+  return {db,settings:{centre:'Centre Commercial Madina',gestionnaire:'NOVATIS GLOBAL SARLU',devise:'GNF'},createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+}
+function loadState(){
+  try{const raw=localStorage.getItem(STORE);if(raw){const parsed=JSON.parse(raw);const seeded=seed();TABLES.forEach(t=>{if(!Array.isArray(parsed.db?.[t]))parsed.db[t]=seeded.db[t]||[]});migrateState(parsed);return parsed}}catch(e){}
+  const s=seed();localStorage.setItem(STORE,JSON.stringify(s));return s;
+}
+function sum(rows,key){return rows.reduce((a,r)=>a+n(r[key]),0)}
+function normalizeSpaceType(value){
+  return ['Boutique','Conteneur','Table','Kiosque','Autre'].includes(value)?value:'Autre';
+}
+function migrateState(data){
+  if(Array.isArray(data.db.documents) && data.db.documents.length){
+    data.db.archives = Array.isArray(data.db.archives) && data.db.archives.length ? data.db.archives : data.db.documents;
+  }
+  delete data.db.boutiques;
+  delete data.db.achats;
+  delete data.db.ventes;
+  delete data.db.fournisseurs;
+  delete data.db.maintenance;
+  delete data.db.incidents;
+  delete data.db.documents;
+  (data.db.inventaire||[]).forEach(r=>r.typeEspace=normalizeSpaceType(r.typeEspace));
+  (data.db.paiements||[]).forEach(r=>r.typeEspace=normalizeSpaceType(r.typeEspace));
+  data.updatedAt=data.updatedAt||new Date().toISOString();
+}
+function rentKey(code,month){return String(code||'').trim()+'|'+String(month||'').trim()}
+function rentStatus(row){
+  if(n(row.montant)<=0)return 'ImpayÃ©';
+  if(n(row.solde)<=0)return 'PayÃ©';
+  if(n(row.paye)>0)return 'Partiel';
+  return String(row.mois||'')<monthNow()?'En retard':'ImpayÃ©';
+}
+function recalculateAll(){
+  repairIds();
+  const paymentsByRent={};
+  moduleRows('paiements').forEach(p=>{
+    p.typeEspace=normalizeSpaceType(p.typeEspace);
+    ['loyer','arrieres','penalites','fraisSecurite','fraisAssainissement','autres','montant'].forEach(k=>p[k]=n(p[k]));
+    if(p.source==='Loyer' && p.statut!=='AnnulÃ©'){
+      const key=rentKey(p.boutiqueCode,p.periode);
+      paymentsByRent[key]=(paymentsByRent[key]||0)+n(p.montant);
     }
-    if (action === 'loadAll') return output_({ ok: true, db: loadAll_() }, e);
-    return output_({ ok: false, error: 'Action inconnue' }, e);
-  } catch (err) {
-    return output_({ ok: false, error: String(err.message || err) }, e);
-  }
-}
-
-function doPost(e) {
-  try {
-    const body = JSON.parse((e.postData && e.postData.contents) || '{}');
-    if (body.action === 'saveAll') {
-      saveAll_(body.db || {});
-      return output_({ ok: true, savedAt: new Date().toISOString() }, e);
-    }
-    if (body.action === 'loadAll') return output_({ ok: true, db: loadAll_() }, e);
-    return output_({ ok: false, error: 'Action inconnue' }, e);
-  } catch (err) {
-    return output_({ ok: false, error: String(err.message || err) }, e);
-  }
-}
-
-function ss_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error('Ouvrez le script depuis un Google Sheet.');
-  return ss;
-}
-
-function saveAll_(db) {
-  const ss = ss_();
-  TABLES.forEach(name => write_(ss, name, Array.isArray(db[name]) ? db[name] : []));
-  meta_(ss);
-}
-
-function loadAll_() {
-  const ss = ss_();
-  const db = {};
-  TABLES.forEach(name => db[name] = read_(ss, name));
-  return db;
-}
-
-function write_(ss, name, rows) {
-  const sh = ss.getSheetByName(name) || ss.insertSheet(name);
-  const headers = HEADERS[name];
-  sh.clearContents();
-  sh.getRange(1, 1, 1, headers.length)
-    .setValues([headers])
-    .setFontWeight('bold')
-    .setBackground('#1f6b4a')
-    .setFontColor('#ffffff');
-  if (rows.length) {
-    sh.getRange(2, 1, rows.length, headers.length)
-      .setValues(rows.map(row => headers.map(header => encode_(row[header]))));
-  }
-  sh.setFrozenRows(1);
-  sh.autoResizeColumns(1, headers.length);
-}
-
-function read_(ss, name) {
-  const sh = ss.getSheetByName(name);
-  if (!sh || sh.getLastRow() < 2) return [];
-  const values = sh.getDataRange().getValues();
-  const headers = values.shift();
-  return values.filter(row => row.some(cell => cell !== '')).map(row => {
-    const item = {};
-    headers.forEach((header, index) => item[header] = decode_(row[index]));
-    return item;
+  });
+  moduleRows('inventaire').forEach(r=>{
+    r.typeEspace=normalizeSpaceType(r.typeEspace);
+    r.loyerMensuel=n(r.loyerMensuel);
+    r.loyerAuto=r.loyerMensuel;
+  });
+  moduleRows('loyers').forEach(r=>{
+    const paidFromReceipts=paymentsByRent[rentKey(r.boutiqueCode,r.mois)];
+    r.montant=n(r.montant);
+    r.paye=paidFromReceipts!==undefined?paidFromReceipts:n(r.paye);
+    r.solde=Math.max(0,r.montant-r.paye);
+    r.statut=rentStatus(r);
+  });
+  moduleRows('caisse').forEach(c=>{
+    const day=String(c.date||'');
+    const entreesPaiements=sum(moduleRows('paiements').filter(p=>p.date===day && p.statut!=='AnnulÃ©'),'montant');
+    const entreesRevenus=sum(moduleRows('revenus').filter(r=>r.date===day && r.statut!=='AnnulÃ©'),'montant');
+    c.entrees=entreesPaiements+entreesRevenus;
+    c.sorties=sum(moduleRows('depenses').filter(d=>d.date===day),'montant');
+    c.soldeTheorique=n(c.soldeOuverture)+n(c.entrees)-n(c.sorties);
+    c.ecart=n(c.cashReel)-n(c.soldeTheorique);
+    c.statut=c.statut==='ClÃ´turÃ©'?'ClÃ´turÃ©':c.ecart===0?'Conforme':'Ã‰cart Ã  justifier';
   });
 }
 
-function encode_(value) {
-  return value === null || value === undefined ? '' : typeof value === 'object' ? JSON.stringify(value) : value;
+function renderNav(){
+  const nav=document.getElementById('nav');
+  const groups={};
+  ALL_NAV.forEach(item=>{(groups[item.group]||(groups[item.group]=[])).push(item)});
+  nav.innerHTML=Object.entries(groups).map(([group,items])=>`<div class="nav-label">${esc(group)}</div>`+items.map(item=>{
+    const isModule=!!MODULE_MAP[item.id];
+    const count=isModule?`<span class="nav-badge">${moduleRows(item.id).length}</span>`:'';
+    return `<button class="nav-btn ${item.id===currentPage||item.id===currentModule&&currentPage==='modulePage'?'active':''}" data-nav="${esc(item.id)}"><span class="nav-ico">${item.icon}</span>${esc(item.title)}${count}</button>`;
+  }).join('')).join('');
+  nav.querySelectorAll('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>navigate(btn.dataset.nav)));
+}
+function navigate(id){
+  if(MODULE_MAP[id]){currentPage='modulePage';currentModule=id;search=''}else currentPage=id;
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===currentPage));
+  const item=MODULE_MAP[id]||ALL_NAV.find(x=>x.id===id)||MODULE_MAP[currentModule];
+  document.getElementById('pageTitle').textContent=item.title;
+  document.getElementById('pageSub').textContent=item.sub;
+  render();
+}
+function render(){renderNav();renderSyncInfo();if(currentPage==='dashboard')renderDashboard();if(currentPage==='modulePage')renderModule(currentModule);if(currentPage==='impayes')renderImpayes();if(currentPage==='reports')renderReports();if(currentPage==='documentation')renderDocumentation();if(currentPage==='settings')renderSettings();applyRoleUi()}
+function renderSyncInfo(message=''){
+  const url=localStorage.getItem(URL_KEY)||'';
+  const dot=document.getElementById('syncDot'), txt=document.getElementById('syncText');
+  dot.className='dot '+(syncing?'warn':url?'ok':'warn');
+  const base=message||(syncing?'Synchronisation en cours':url?'Backend configurÃ©':'Mode local actif');
+  txt.textContent=base+(currentRole()?' - '+roleLabel():'');
+}
+function badge(v){
+  const s=String(v||'');
+  let cls='';
+  if(/payÃ©|confirmÃ©|actif|conforme|complet|rÃ©solu|clos|bon|occupÃ©e|validÃ©e/i.test(s))cls='ok';
+  else if(/partiel|suivi|prÃ©parÃ©|en cours|Ã |moyen|normal|rÃ©servÃ©e/i.test(s))cls='warn';
+  else if(/impayÃ©|retard|critique|urgent|Ã©levÃ©|Ã©cart|expirÃ©|rejetÃ©e|annulÃ©|suspendu|incident/i.test(s))cls='err';
+  else if(/libre|info|prospect/i.test(s))cls='blue';
+  return `<span class="badge ${cls}">${esc(s||'-')}</span>`;
+}
+function renderDashboard(){
+  const espaces=moduleRows('inventaire'), loyers=moduleRows('loyers'), sorties=moduleRows('depenses'), revenus=moduleRows('revenus');
+  const occupied=espaces.filter(b=>b.statut==='OccupÃ©').length;
+  const rentDue=sum(loyers,'montant'), rentPaid=sum(loyers,'paye'), expenses=sum(sorties,'montant'), other=sum(revenus,'montant');
+  const alerts=[...moduleRows('alertes'),...loyers.filter(r=>n(r.solde)>0).map(r=>({titre:'Solde loyer '+r.boutiqueCode,niveau:'Urgent',details:money(r.solde)+' restant pour '+r.locataire}))];
+  document.getElementById('dashboard').innerHTML=`
+    <div class="grid stats">
+      ${stat('Espaces occupÃ©s',occupied+'/'+espaces.length,espaces.length?pct(occupied/espaces.length):'0%')}
+      ${stat('Recouvrement loyers',money(rentPaid),rentDue?pct(rentPaid/rentDue):'0%')}
+      ${stat('RÃ©sultat net',money(rentPaid+other-expenses),'Recettes - dÃ©penses')}
+      ${stat('Alertes ouvertes',alerts.length,'Actions Ã  suivre')}
+    </div>
+    <div class="grid split">
+      <div class="card"><div class="section-head"><h3>Occupation par zone</h3><button class="btn sm" onclick="navigate('inventaire')">Voir</button></div><div class="bar-list">${sectorBars(espaces)}</div></div>
+      <div class="card"><div class="section-head"><h3>PrioritÃ©s</h3><button class="btn sm" onclick="navigate('alertes')">Alertes</button></div><div class="pad">${alerts.slice(0,7).map(a=>`<div class="alert"><div><b>${esc(a.titre)}</b><span>${esc(a.details||a.module||'Suivi requis')}</span></div>${badge(a.niveau||'Suivi')}</div>`).join('')||'<div class="empty">Aucune alerte.</div>'}</div></div>
+    </div>
+    <div class="grid tri" style="margin-top:14px">
+      <div class="card pad"><h3>Modules actifs</h3><p>${MODULES.length} modules documentÃ©s et synchronisables avec Google Sheets.</p></div>
+      <div class="card pad"><h3>Stockage local</h3><p>DerniÃ¨re mise Ã  jour : ${new Date(state.updatedAt).toLocaleString('fr-FR')}</p></div>
+      <div class="card pad"><h3>Backend</h3><p>${localStorage.getItem(URL_KEY)?'URL Apps Script configurÃ©e.':'Aucune URL Apps Script enregistrÃ©e.'}</p></div>
+    </div>`;
+}
+function stat(label,value,note){return `<div class="card stat"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(note||'')}</small></div>`}
+function sectorBars(rows){
+  const by={};rows.forEach(r=>{const s=r.zone||r.secteur||'Non classÃ©';by[s]=by[s]||{total:0,occ:0};by[s].total++;if(r.statut==='OccupÃ©'||r.statut==='OccupÃ©e')by[s].occ++});
+  return Object.entries(by).map(([k,v])=>{const rate=v.total?v.occ/v.total:0;return `<div class="bar-row"><b>${esc(k)}</b><div class="track"><div class="fill" style="width:${Math.round(rate*100)}%"></div></div><span>${v.occ}/${v.total}</span></div>`}).join('')||'<div class="empty">Aucun espace.</div>';
+}
+function renderInventory(){
+  const mod=MODULE_MAP.inventaire, rows=moduleRows('inventaire');
+  const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
+  const cols=mod.fields;
+  document.getElementById('modulePage').innerHTML=`
+    <div class="grid stats">
+      ${stat('Espaces inventoriÃ©s',fmt(rows.length),'Registre officiel')}
+      ${stat('Espaces occupÃ©s',fmt(rows.filter(r=>r.statut==='OccupÃ©').length),'Occupation physique')}
+      ${stat('Loyer mensuel total',money(sum(rows,'loyerMensuel')),'Potentiel GNF')}
+      ${stat('Anomalies',fmt(rows.filter(r=>r.typeAnomalie&&r.typeAnomalie!=='RAS').length),'Ã€ rÃ©gulariser')}
+    </div>
+    <div class="card">
+      <div class="section-head">
+        <div><h3>Inventaire officiel</h3><p>Chaque espace physique du centre est enregistrÃ© ici. Les autres modules utilisent ces donnÃ©es comme rÃ©fÃ©rence.</p></div>
+        <div class="tools"><input class="search" id="moduleSearch" placeholder="Rechercher" value="${esc(search)}"><button class="btn" onclick="exportCsv('inventaire')">CSV</button>${canEdit()?`<button class="btn primary" onclick="openForm('inventaire')">Ajouter</button>`:''}</div>
+      </div>
+      <div class="official-wrap">
+        <div class="official-title">ðŸŽ INVENTAIRE OFFICIEL â€” CENTRE COMMERCIAL MADINA | NOVATIS GLOBAL SARLU</div>
+        <div class="official-sub">Enregistrer ici chaque espace physique. Les autres modules s'alimentent automatiquement.</div>
+        <table class="official-table"><thead><tr>${cols.map(f=>`<th>${esc(f[1])}</th>`).join('')}<th>Actions</th></tr></thead><tbody>${filtered.map(row=>officialInventoryRow(row,cols)).join('')||`<tr><td colspan="${cols.length+1}" class="empty">Aucun espace inventoriÃ©.</td></tr>`}</tbody></table>
+      </div>
+    </div>`;
+  document.getElementById('moduleSearch').addEventListener('input',e=>{search=e.target.value;renderInventory()});
+}
+function officialInventoryRow(row,cols){
+  const actions=canEdit()?`<button class="btn sm" onclick="openForm('inventaire','${row.id}')">Modifier</button> <button class="btn sm danger" onclick="deleteRow('inventaire','${row.id}')">Supprimer</button>`:'Lecture seule';
+  return `<tr>${cols.map(f=>{
+    const key=f[0], value=row[key], cls=f[2]==='money'?'money-cell':key==='loyerAuto'?'rent-out':key==='statut'&&value==='Vacant'?'vacant':key==='statut'?'occupied':'';
+    return `<td class="${cls}">${cell(value,f)}</td>`;
+  }).join('')}<td>${actions}</td></tr>`;
+}
+function renderModule(id){
+  if(id==='inventaire'){renderInventory();return}
+  if(id==='depenses'){renderExpenses();return}
+  const mod=MODULE_MAP[id], rows=moduleRows(id);
+  const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
+  const visible=mod.fields.slice(0,7);
+  const extraTools=id==='loyers'&&canEdit()?`<button class="btn primary" onclick="generateRents()">GÃ©nÃ©rer loyers du mois</button>`:'';
+  document.getElementById('modulePage').innerHTML=`
+    <div class="grid stats">
+      ${stat('Enregistrements',fmt(rows.length),'Total module')}
+      ${stat('Montant suivi',money(sumMoneyFields(rows,mod)),'Champs financiers')}
+      ${stat('Statuts ouverts',fmt(rows.filter(r=>/ouvert|impayÃ©|partiel|Ã |en cours|urgent|critique/i.test(Object.values(r).join(' '))).length),'Ã€ traiter')}
+      ${stat('DerniÃ¨re MAJ',new Date(state.updatedAt).toLocaleDateString('fr-FR'),'localStorage')}
+    </div>
+    <div class="card">
+      <div class="section-head">
+        <div><h3>${esc(mod.title)}</h3><p>${esc(mod.sub)}</p></div>
+        <div class="tools"><input class="search" id="moduleSearch" placeholder="Rechercher" value="${esc(search)}">${extraTools}<button class="btn" onclick="exportCsv('${id}')">CSV</button>${canEdit()?`<button class="btn primary" onclick="openForm('${id}')">Ajouter</button>`:''}</div>
+      </div>
+      <div class="table-wrap"><table><thead><tr>${visible.map(f=>`<th>${esc(f[1])}</th>`).join('')}<th>Actions</th></tr></thead><tbody>${filtered.map(r=>rowHtml(mod,r,visible)).join('')||`<tr><td colspan="${visible.length+1}" class="empty">Aucune donnÃ©e.</td></tr>`}</tbody></table></div>
+    </div>`;
+  document.getElementById('moduleSearch').addEventListener('input',e=>{search=e.target.value;renderModule(id)});
+}
+function renderExpenses(){
+  const mod=MODULE_MAP.depenses, rows=moduleRows('depenses');
+  const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
+  const cols=mod.fields.slice(0,11);
+  document.getElementById('modulePage').innerHTML=`
+    <div class="grid stats">
+      ${stat('Sorties enregistrÃ©es',fmt(rows.length),'Registre dÃ©penses')}
+      ${stat('Total sorties',money(sum(rows,'montant')),'Montant GNF')}
+      ${stat('Cash',money(sum(rows.filter(r=>r.modePaiement==='Cash'),'montant')),'Sorties espÃ¨ces')}
+      ${stat('Virement',money(sum(rows.filter(r=>r.modePaiement==='Virement'),'montant')),'Sorties bancaires')}
+    </div>
+    <div class="card">
+      <div class="section-head">
+        <div><h3>Registre des dÃ©penses</h3><p>Toutes les sorties de caisse doivent Ãªtre autorisÃ©es et enregistrÃ©es ici.</p></div>
+        <div class="tools"><input class="search" id="moduleSearch" placeholder="Rechercher" value="${esc(search)}"><button class="btn" onclick="exportCsv('depenses')">CSV</button>${canEdit()?`<button class="btn primary" onclick="openForm('depenses')">Ajouter</button>`:''}</div>
+      </div>
+      <div class="official-wrap">
+        <div class="expense-title">ðŸ’¸ REGISTRE DES DÃ‰PENSES â€” CENTRE COMMERCIAL MADINA</div>
+        <div class="expense-sub">Toutes les sorties de caisse doivent Ãªtre autorisÃ©es et enregistrÃ©es ici.</div>
+        <table class="expense-table"><thead><tr>${cols.map(f=>`<th>${esc(f[1])}</th>`).join('')}<th>Actions</th></tr></thead><tbody>${filtered.map(row=>expenseRow(row,cols)).join('')||`<tr><td colspan="${cols.length+1}" class="empty">Aucune dÃ©pense enregistrÃ©e.</td></tr>`}</tbody></table>
+      </div>
+    </div>`;
+  document.getElementById('moduleSearch').addEventListener('input',e=>{search=e.target.value;renderExpenses()});
+}
+function expenseRow(row,cols){
+  const actions=canEdit()?`<button class="btn sm" onclick="openForm('depenses','${row.id}')">Modifier</button> <button class="btn sm danger" onclick="deleteRow('depenses','${row.id}')">Supprimer</button>`:'Lecture seule';
+  return `<tr>${cols.map(f=>{
+    const key=f[0], cls=key==='mois'?'month':key==='categorie'?'cat':key==='montant'?'amount':'';
+    return `<td class="${cls}">${cell(row[key],f)}</td>`;
+  }).join('')}<td>${actions}</td></tr>`;
+}
+function sumMoneyFields(rows,mod){
+  const keys=mod.fields.filter(f=>f[2]==='money').map(f=>f[0]);
+  return rows.reduce((a,r)=>a+keys.reduce((b,k)=>b+n(r[k]),0),0);
+}
+function rowHtml(mod,row,fields){
+  const receipt=mod.id==='paiements'?` <button class="btn sm primary" onclick="openReceipt('${row.id}')">ReÃ§u</button>`:'';
+  const close=canEdit()&&mod.id==='caisse'&&row.statut!=='ClÃ´turÃ©'?` <button class="btn sm primary" onclick="closeCash('${row.id}')">ClÃ´turer</button>`:'';
+  const edit=canEdit()?` <button class="btn sm" onclick="openForm('${mod.id}','${row.id}')">Modifier</button> <button class="btn sm danger" onclick="deleteRow('${mod.id}','${row.id}')">Supprimer</button>`:' Lecture seule';
+  const actions=mod.id==='audit'?'':`${receipt}${close}${edit}`;
+  return `<tr>${fields.map(f=>`<td>${cell(row[f[0]],f)}</td>`).join('')}<td>${actions}</td></tr>`;
+}
+function cell(v,f){if(f[2]==='money')return money(v);if(f[2]==='select')return badge(v);if(f[2]==='url'&&v)return `<a href="${esc(v)}" target="_blank">Ouvrir</a>`;if(f[2]==='file')return v?`<a href="${esc(v)}" download>TÃ©lÃ©charger</a>`:'';return esc(v||'')}
+function openForm(moduleId,rowId=''){
+  if(!requireAdmin('modifier les donnÃ©es'))return;
+  const mod=MODULE_MAP[moduleId], rows=moduleRows(moduleId), row=rows.find(r=>r.id===rowId)||{id:''};
+  if(moduleId==='audit'){toast('Le journal audit est en lecture seule');return}
+  const modal=document.getElementById('modal');
+  modal.innerHTML=`<header><h3>${rowId?'Modifier':'Ajouter'} - ${esc(mod.title)}</h3><button class="btn sm" onclick="closeModal()">Fermer</button></header>
+    <form id="editForm"><div class="form-grid">${mod.fields.map(f=>fieldHtml(f,row[f[0]])).join('')}</div><footer><button type="button" class="btn" onclick="closeModal()">Annuler</button><button class="btn primary">Enregistrer</button></footer></form>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('editForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const data={id:rowId||friendlyId(moduleId)};
+    try{
+      for(const f of mod.fields){
+        const el=e.target.elements[f[0]];
+        if(f[2]==='file'){
+          if(el.files&&el.files[0]){
+            data[f[0]]=await readFileData(el.files[0]);
+            data.fichierNom=el.files[0].name;
+          }else data[f[0]]=row[f[0]]||'';
+        }else data[f[0]]=f[2]==='money'||f[2]==='number'?n(el.value):el.value;
+      }
+    }catch(err){toast(err.message);return}
+    const error=validateRecord(moduleId,data,rowId);
+    if(error){toast(error);return}
+    const idx=rows.findIndex(r=>r.id===rowId);
+    const action=idx>=0?'Modification':'Creation';
+    if(idx>=0)rows[idx]=data;else rows.push(data);
+    if(moduleId==='loyers')data.solde=Math.max(0,n(data.montant)-n(data.paye));
+    audit(action,moduleId,data.id,(MODULE_MAP[moduleId]?.title||moduleId)+' '+data.id);
+    save();closeModal();render();toast('Enregistrement sauvegardÃ©');
+  });
+}
+function readFileData(file){
+  return new Promise((resolve,reject)=>{
+    if(file.size>1024*1024*2){reject(new Error('Document trop volumineux. Maximum conseillÃ©: 2 Mo.'));return}
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(new Error('Lecture du fichier impossible'));
+    reader.readAsDataURL(file);
+  });
+}
+function fieldHtml(f,value){
+  const [key,label,type,opts]=f, full=type==='textarea'||type==='url';
+  if(type==='textarea')return `<div class="field full"><label>${esc(label)}</label><textarea name="${key}" rows="3">${esc(value||'')}</textarea></div>`;
+  if(type==='file')return `<div class="field full"><label>${esc(label)}</label>${value?`<p><a href="${esc(value)}" download>TÃ©lÃ©charger le document actuel</a></p>`:''}<input name="${key}" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp"></div>`;
+  if(type==='select')return `<div class="field"><label>${esc(label)}</label><select name="${key}">${String(opts||'').split('|').map(o=>`<option ${o==value?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+  const inputType=type==='money'?'number':type;
+  return `<div class="field ${full?'full':''}"><label>${esc(label)}</label><input name="${key}" type="${inputType}" value="${esc(value??defaultValue(type,key))}"></div>`;
+}
+function defaultValue(type,key){if(type==='date')return today();if(type==='month')return monthNow();if(type==='number'||type==='money')return 0;return ''}
+function closeModal(){document.getElementById('modalBack').classList.remove('show');document.getElementById('modal').className='modal'}
+function deleteRow(moduleId,rowId){if(!requireAdmin('supprimer'))return;if(moduleId==='audit'){toast('Le journal audit ne peut pas etre supprime');return}if(!confirm('Supprimer cet enregistrement ?'))return;state.db[moduleId]=moduleRows(moduleId).filter(r=>r.id!==rowId);audit('Suppression',moduleId,rowId,'Ligne supprimee');save();render();toast('Enregistrement supprimÃ©')}
+function openReceipt(rowId){
+  const p=moduleRows('paiements').find(r=>r.id===rowId);
+  if(!p){toast('Paiement introuvable');return}
+  const total=n(p.loyer)+n(p.arrieres)+n(p.penalites)+n(p.fraisSecurite)+n(p.fraisAssainissement)+n(p.autres);
+  const reste=Math.max(0,total-n(p.montant));
+  const modal=document.getElementById('modal');
+  modal.className='modal receipt-modal';
+  modal.innerHTML=`<header><h3>ReÃ§u de paiement - ${esc(p.reference||'')}</h3><button class="btn sm" onclick="closeReceipt()">Fermer</button></header>
+    <div class="receipt-actions"><button class="btn" onclick="navigate('paiements');closeReceipt()">Retour aux paiements</button><button class="btn primary" onclick="window.print()">Imprimer</button></div>
+    ${receiptHtml(p,total,reste)}`;
+  document.getElementById('modalBack').classList.add('show');
+}
+function closeReceipt(){document.getElementById('modal').className='modal';closeModal()}
+function receiptHtml(p,total,reste){
+  const type=p.typeEspace||'Boutique';
+  const checked=x=>type===x?'â˜‘':'â˜';
+  const mode=p.mode||'EspÃ¨ces';
+  const modeChecked=x=>mode===x?'â˜‘':'â˜';
+  return `<div class="receipt">
+    <table>
+      <tr><td class="r-logo" rowspan="2">NOVATIS<br><span style="font-size:17px">GLOBAL</span></td><td class="r-blue r-title" colspan="3">REÃ‡U DE PAIEMENT</td></tr>
+      <tr><td class="r-red">â–º SAISIR ID DU REÃ‡U :</td><td class="r-id">${esc(p.reference||'REC-0001')}</td><td><b>Loyer du :</b> ${esc(p.periode||'')}<br><b style="color:#6b21a8">Imprimer : Ctrl+P aprÃ¨s saisie de l'ID</b></td></tr>
+      <tr><td class="r-blue r-note" colspan="4">ReÃ§u dÃ©livrÃ© pour paiement du loyer de la pÃ©riode indiquÃ©e</td></tr>
+      <tr><td class="r-blue r-section" colspan="2">GESTIONNAIRE</td><td class="r-blue r-section" colspan="2">LOCATAIRE</td></tr>
+      <tr><td colspan="2" rowspan="5" style="text-align:center;font-size:20px;font-weight:900">NOVATIS GLOBAL SARLU<br>Centre Commercial EX ENIPRA Madina</td><td class="r-label">Nom locataire officiel :</td><td><b>${esc(p.payeur)}</b></td></tr>
+      <tr><td class="r-label">Occupant rÃ©el (si sous-location) :</td><td><b>${esc(p.occupantReel||p.payeur)}</b></td></tr>
+      <tr><td class="r-label">TÃ©lÃ©phone :</td><td><b>${esc(p.telephone)}</b></td></tr>
+      <tr><td class="r-label">Nom commercial :</td><td><b>${esc(p.nomCommercial)}</b></td></tr>
+      <tr><td class="r-label">ActivitÃ© principale :</td><td><b>${esc(p.activite)}</b></td></tr>
+      <tr><td class="r-blue r-section" colspan="4">TYPE Dâ€™ESPACE (cocher une seule case)</td></tr>
+      <tr><td colspan="4">${checked('Boutique')} Boutique &nbsp;&nbsp; ${checked('Conteneur')} Conteneur &nbsp;&nbsp; ${checked('Table')} Table &nbsp;&nbsp; ${checked('Kiosque')} Kiosque &nbsp;&nbsp; ${checked('Autre')} Autre :</td></tr>
+      <tr><td><b>Code espace / ID Loy</b> ${esc(p.boutiqueCode)}</td><td colspan="2"><b>Zone :</b> ${esc(p.zone)}</td><td><b>Surface mÂ² :</b> ${esc(p.surface||0)}</td></tr>
+      <tr><td class="r-blue r-section" colspan="3">DÃ‰TAIL DU PAIEMENT</td><td class="r-blue r-section">Montant (GNF)</td></tr>
+      ${receiptLine('Loyer',p.loyer)}
+      ${receiptLine('ArriÃ©rÃ©s de loyer',p.arrieres,true)}
+      ${receiptLine('PÃ©nalitÃ©s de retard',p.penalites)}
+      ${receiptLine('Frais de sÃ©curitÃ©',p.fraisSecurite)}
+      ${receiptLine('Frais dâ€™assainissement',p.fraisAssainissement)}
+      ${receiptLine('Autres (Ã  prÃ©ciser)',p.autres)}
+      <tr><td class="r-total" colspan="3">TOTAL</td><td class="r-total">${money(total)}</td></tr>
+      <tr><td class="r-total" colspan="3">Montant payÃ©</td><td class="r-total">${money(p.montant)}</td></tr>
+      <tr><td class="r-total" colspan="3">RESTE Ã€ PAYER</td><td class="r-total">${money(reste)}</td></tr>
+      <tr><td colspan="4">ArrÃªtÃ©e la prÃ©sent reÃ§u Ã  la somme de :<br>En toutes lettres :<br>MODE DE PAIEMENT : &nbsp; ${modeChecked('EspÃ¨ces')} EspÃ¨ces &nbsp; ${modeChecked('Virement')} Virement &nbsp; ${modeChecked('Autre')} Autre :<br>RÃ‰FÃ‰RENCE PAIEMENT : ${esc(p.referencePaiement||p.reference||'')}<br>Fait Ã  : Conakry, le ${new Date(p.date||today()).toLocaleDateString('fr-FR')}</td></tr>
+      <tr><td class="r-sign" colspan="2">LOCATAIRE</td><td class="r-sign" colspan="2">LA DIRECTION GÃ‰NÃ‰RALE</td></tr>
+    </table>
+    <div class="r-footer">SiÃ¨ge social : Lambanyi, Commune de Lambanyi, Conakry - RÃ©publique de GuinÃ©e &nbsp; | &nbsp; Tel : +224 628 91 54 27 &nbsp; | &nbsp; Email : novatisglobalsarlu@gmail.com</div>
+  </div>`;
+}
+function receiptLine(label,value,highlight=false){return `<tr><td class="${highlight?'r-yellow':''}" colspan="3">${esc(label)}</td><td class="r-amount ${highlight?'r-yellow':''}">${money(value)}</td></tr>`}
+
+function closeCash(rowId){
+  if(!requireAdmin('clÃ´turer la caisse'))return;
+  const row=moduleRows('caisse').find(r=>r.id===rowId);
+  if(!row){toast('Caisse introuvable');return}
+  recalculateAll();
+  row.statut='ClÃ´turÃ©';
+  audit('Cloture caisse','caisse',row.id,'Caisse du '+(row.date||'')+' cloturee avec ecart '+money(row.ecart));
+  save();
+  render();
+  toast('Caisse clÃ´turÃ©e');
+}
+function unpaidRows(){
+  return moduleRows('loyers').filter(r=>n(r.solde)>0).sort((a,b)=>String(a.mois).localeCompare(String(b.mois))||String(a.boutiqueCode).localeCompare(String(b.boutiqueCode)));
+}
+function createReminder(rowId){
+  if(!requireAdmin('crÃ©er une relance'))return;
+  const r=moduleRows('loyers').find(x=>x.id===rowId);
+  if(!r){toast('Loyer introuvable');return}
+  const title='Relance loyer '+r.boutiqueCode+' '+r.mois;
+  moduleRows('alertes').push({id:friendlyId('alertes'),date:today(),titre:title,module:'loyers',niveau:'Urgent',responsable:'Gestionnaire',echeance:today(),statut:'Ouverte',details:'Solde a payer: '+money(r.solde)+' - '+(r.locataire||'')});
+  audit('Relance','loyers',r.id,title);
+  save();
+  renderImpayes();
+  toast('Relance crÃ©Ã©e');
+}
+function renderImpayes(){
+  const rows=unpaidRows();
+  const total=sum(rows,'solde');
+  document.getElementById('impayes').innerHTML=`
+    <div class="grid stats">
+      ${stat('Lignes impayÃ©es',fmt(rows.length),'Soldes ouverts')}
+      ${stat('Total Ã  relancer',money(total),'GNF')}
+      ${stat('Mois concernÃ©s',fmt(new Set(rows.map(r=>r.mois)).size),'PÃ©riodes')}
+      ${stat('Alertes ouvertes',fmt(moduleRows('alertes').filter(a=>a.statut!=='TraitÃ©e').length),'Suivi')}
+    </div>
+    <div class="card">
+      <div class="section-head"><div><h3>ImpayÃ©s & relances</h3><p>Tableau dÃ©diÃ© aux loyers non soldÃ©s.</p></div><button class="btn" onclick="exportCsv('loyers')">CSV Loyers</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Boutique</th><th>Locataire</th><th>Mois</th><th>Montant dÃ»</th><th>PayÃ©</th><th>Solde</th><th>Statut</th><th>Actions</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td>${esc(r.boutiqueCode)}</td><td>${esc(r.locataire)}</td><td>${esc(r.mois)}</td><td>${money(r.montant)}</td><td>${money(r.paye)}</td><td>${money(r.solde)}</td><td>${badge(r.statut)}</td><td>${canEdit()?`<button class="btn sm primary" onclick="createReminder('${r.id}')">Relancer</button> <button class="btn sm" onclick="navigate('loyers');openForm('loyers','${r.id}')">Ouvrir</button>`:'Lecture seule'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">Aucun impayÃ©.</td></tr>'}
+      </tbody></table></div>
+    </div>`;
+}
+function renderReports(){
+  const rent=sum(moduleRows('loyers'),'paye'), sorties=sum(moduleRows('depenses'),'montant'), other=sum(moduleRows('revenus'),'montant');
+  const espaces=moduleRows('inventaire'), occupied=espaces.filter(b=>b.statut==='OccupÃ©').length;
+  const month=monthNow();
+  const summary=monthlySummary(month);
+  document.getElementById('reports').innerHTML=`
+    <div class="grid stats">${stat('Loyers encaissÃ©s',money(rent),'PÃ©riode courante')}${stat('Revenus annexes',money(other),'Hors loyers')}${stat('DÃ©penses',money(sorties),'Sorties suivies')}${stat('Net',money(rent+other-sorties),'RÃ©sultat')}</div>
+    <div class="grid split">
+      <div class="card"><div class="section-head"><h3>RÃ©partition recettes</h3></div><div class="bar-list">${bars([{label:'Loyers',value:rent},{label:'Revenus annexes',value:other},{label:'DÃ©penses',value:sorties}])}</div></div>
+      <div class="card"><div class="section-head"><h3>Indicateurs exploitation</h3></div><div class="bar-list">${bars([{label:'Occupation',value:espaces.length?occupied/espaces.length*100:0,suffix:'%'},{label:'Recouvrement',value:sum(moduleRows('loyers'),'montant')?rent/sum(moduleRows('loyers'),'montant')*100:0,suffix:'%'},{label:'Alertes traitÃ©es',value:moduleRows('alertes').length?moduleRows('alertes').filter(a=>a.statut==='TraitÃ©e').length/moduleRows('alertes').length*100:0,suffix:'%'}])}</div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><div class="section-head"><div><h3>RÃ©sumÃ© du mois</h3><p>${esc(month)}</p></div><button class="btn primary" onclick="printMonthlySummary('${month}')">Imprimer</button></div><div class="bar-list">${bars([{label:'Loyers encaissÃ©s',value:summary.rent},{label:'Revenus annexes',value:summary.other},{label:'DÃ©penses',value:summary.expenses},{label:'ImpayÃ©s',value:summary.unpaid},{label:'Net',value:summary.net}])}</div></div>`;
+}
+function bars(items){
+  const max=Math.max(1,...items.map(i=>i.value));
+  return items.map(i=>`<div class="bar-row"><b>${esc(i.label)}</b><div class="track"><div class="fill" style="width:${Math.min(100,Math.round(i.value/max*100))}%"></div></div><span>${i.suffix?Math.round(i.value)+i.suffix:money(i.value)}</span></div>`).join('');
+}
+function monthlySummary(month){
+  const loyers=moduleRows('loyers').filter(r=>r.mois===month);
+  const payments=moduleRows('paiements').filter(p=>String(p.periode||'')===month&&p.statut!=='AnnulÃ©');
+  const expenses=moduleRows('depenses').filter(d=>String(d.date||'').startsWith(month));
+  const revenues=moduleRows('revenus').filter(r=>String(r.date||'').startsWith(month)&&r.statut!=='AnnulÃ©');
+  const rent=payments.length?sum(payments.filter(p=>p.source==='Loyer'),'montant'):sum(loyers,'paye');
+  const other=sum(revenues,'montant')+sum(payments.filter(p=>p.source!=='Loyer'),'montant');
+  const out=sum(expenses,'montant');
+  const unpaid=sum(loyers,'solde');
+  return {rent,other,expenses:out,unpaid,net:rent+other-out,loyers};
+}
+function printMonthlySummary(month=monthNow()){
+  const s=monthlySummary(month);
+  const modal=document.getElementById('modal');
+  modal.className='modal receipt-modal';
+  modal.innerHTML=`<header><h3>RÃ©sumÃ© du mois - ${esc(month)}</h3><button class="btn sm" onclick="closeModal()">Fermer</button></header>
+    <div class="receipt-actions"><button class="btn primary" onclick="window.print()">Imprimer</button></div>
+    <div class="receipt"><table>
+      <tr><td class="r-blue r-title" colspan="4">RÃ‰SUMÃ‰ MENSUEL - CENTRE COMMERCIAL MADINA</td></tr>
+      <tr><td class="r-label">Mois</td><td colspan="3">${esc(month)}</td></tr>
+      <tr><td>Loyers encaissÃ©s</td><td class="r-amount">${money(s.rent)}</td><td>Revenus annexes</td><td class="r-amount">${money(s.other)}</td></tr>
+      <tr><td>DÃ©penses</td><td class="r-amount">${money(s.expenses)}</td><td>RÃ©sultat net</td><td class="r-amount">${money(s.net)}</td></tr>
+      <tr><td>ImpayÃ©s</td><td class="r-amount">${money(s.unpaid)}</td><td>Lignes loyers</td><td>${fmt(s.loyers.length)}</td></tr>
+      <tr><td class="r-blue r-section" colspan="4">DÃ©tail des impayÃ©s</td></tr>
+      ${s.loyers.filter(r=>n(r.solde)>0).map(r=>`<tr><td>${esc(r.boutiqueCode)}</td><td>${esc(r.locataire)}</td><td>${esc(r.mois)}</td><td class="r-amount">${money(r.solde)}</td></tr>`).join('')||'<tr><td colspan="4">Aucun impayÃ© sur ce mois.</td></tr>'}
+    </table></div>`;
+  document.getElementById('modalBack').classList.add('show');
+}
+function renderDocumentation(){
+  document.getElementById('documentation').innerHTML=`
+    <div class="card"><h3>Cahier des charges intÃ©grÃ©</h3><p>Cette application standalone couvre les ${MODULES.length} modules mÃ©tiers ci-dessous. Chaque module dispose dâ€™un registre, de formulaires CRUD, dâ€™une recherche, dâ€™un export CSV, dâ€™une persistance localStorage et dâ€™une synchronisation Google Sheets via Apps Script.</p></div>
+    <div class="doc-grid">${MODULES.map((m,i)=>`<div class="doc-item"><h4>${String(i+1).padStart(2,'0')} - ${m.icon} ${esc(m.title)}</h4><p>${esc(m.sub)}</p><p><b>Champs :</b> ${m.fields.map(f=>esc(f[1])).join(', ')}</p></div>`).join('')}</div>`;
+}
+function renderSettings(){
+  document.getElementById('settings').innerHTML=`
+    <div class="card"><h3>VERSION ADMIN/LECTEUR - 02/06/2026</h3><p>Cette version contient deux accÃ¨s : Admin 1234 et Lecteur 0000. Si vous voyez encore seulement "Nouveau mot de passe admin", GitHub Pages affiche une ancienne version.</p></div>
+    <div class="card">
+      <h3>Connexion Google Sheets</h3>
+      <p>Collez lâ€™URL de dÃ©ploiement Web App Apps Script. Sans URL, tout reste disponible en localStorage avec import/export JSON.</p>
+      <div class="url-row"><input id="sheetsUrl" value="${esc(localStorage.getItem(URL_KEY)||'')}" placeholder="https://script.google.com/macros/s/VOTRE_ID/exec"><button class="btn primary admin-only" id="saveUrlBtn">Enregistrer</button><button class="btn" id="testUrlBtn">Tester</button></div>
+      <div class="actions" style="margin-top:10px"><button class="btn" id="loadUrlBtn">Charger depuis Sheets</button><button class="btn primary admin-only" id="syncUrlBtn">Sauvegarder et vÃ©rifier</button></div>
+    </div>
+    <div class="card">
+      <h3>Installation Apps Script</h3>
+      <div class="steps">
+        <div class="step">CrÃ©ez ou ouvrez un Google Sheet pour le centre commercial.</div>
+        <div class="step">Extensions &gt; Apps Script, collez le code ci-dessous puis enregistrez.</div>
+        <div class="step">DÃ©ployer &gt; Nouveau dÃ©ploiement &gt; Application Web.</div>
+        <div class="step">ExÃ©cuter en tant que vous-mÃªme, accÃ¨s selon votre politique, puis copiez lâ€™URL <code>/exec</code>.</div>
+        <div class="step">Revenez ici, enregistrez lâ€™URL, testez, puis utilisez Sync Google Sheets.</div>
+      </div>
+    </div>
+    <div class="card"><h3>SÃ©curitÃ© locale</h3><p>Admin = modification complÃ¨te. Lecteur = consultation seule. Admin par dÃ©faut: 1234. Lecteur par dÃ©faut: 0000.</p><div class="url-row"><input id="adminPass" type="password" placeholder="Nouveau mot de passe admin"><input id="viewerPass" type="password" placeholder="Nouveau mot de passe lecteur"><button class="btn primary admin-only" id="savePassBtn">Changer mots de passe</button><button class="btn" id="lockBtn">Verrouiller</button></div></div>
+    <div class="card"><h3>DonnÃ©es locales</h3><p>${TABLES.length} tables, ${TABLES.reduce((a,t)=>a+moduleRows(t).length,0)} lignes. DerniÃ¨re mise Ã  jour : ${new Date(state.updatedAt).toLocaleString('fr-FR')}.</p><div class="actions"><button class="btn" id="exportExcelSettingsBtn">Exporter Excel</button><button class="btn danger admin-only" id="resetBtn">RÃ©initialiser les donnÃ©es dÃ©mo</button></div></div>
+    <div class="card"><h3>Code Apps Script complet</h3><pre>${esc(appScriptCode())}</pre></div>`;
+  document.getElementById('saveUrlBtn').onclick=()=>{if(!requireAdmin('changer la configuration'))return;localStorage.setItem(URL_KEY,document.getElementById('sheetsUrl').value.trim());render();toast('URL Apps Script enregistrÃ©e')};
+  document.getElementById('testUrlBtn').onclick=testBackend;
+  document.getElementById('loadUrlBtn').onclick=loadSheets;
+  document.getElementById('syncUrlBtn').onclick=syncSheets;
+  document.getElementById('savePassBtn').onclick=()=>{if(!requireAdmin('changer les mots de passe'))return;const a=document.getElementById('adminPass').value.trim();const v=document.getElementById('viewerPass').value.trim();if(a&&a.length<4){toast('Mot de passe admin trop court');return}if(v&&v.length<4){toast('Mot de passe lecteur trop court');return}if(a)localStorage.setItem(PASS_KEY,a);if(v)localStorage.setItem(VIEWER_PASS_KEY,v);audit('SÃ©curitÃ©','systeme','password','Mots de passe mis Ã  jour');save(true,false);toast('Mots de passe mis Ã  jour')};
+  document.getElementById('lockBtn').onclick=()=>{sessionStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem(ROLE_KEY);checkLock()};
+  document.getElementById('exportExcelSettingsBtn').onclick=exportExcel;
+  document.getElementById('resetBtn').onclick=()=>{if(!requireAdmin('rÃ©initialiser'))return;if(confirm('RÃ©initialiser les donnÃ©es locales avec le jeu de dÃ©monstration ?')){state=seed();save();render();toast('DonnÃ©es rÃ©initialisÃ©es')}};
+}
+function appScriptCode(){
+  const headers=Object.fromEntries(MODULES.map(m=>[m.id,['id',...m.fields.map(f=>f[0])]]));
+  return `const TABLES = ${JSON.stringify(TABLES)};\nconst HEADERS = ${JSON.stringify(headers,null,2)};\n\nfunction doGet(e) {\n  try {\n    const action = (e.parameter.action || 'loadAll');\n    if (action === 'ping') return output_({ ok: true, message: 'Backend Madina actif', at: new Date().toISOString() }, e);\n    if (action === 'loadAll') return output_({ ok: true, db: loadAll_() }, e);\n    return output_({ ok: false, error: 'Action inconnue' }, e);\n  } catch (err) { return output_({ ok: false, error: String(err.message || err) }, e); }\n}\n\nfunction doPost(e) {\n  try {\n    const body = JSON.parse((e.postData && e.postData.contents) || '{}');\n    if (body.action === 'saveAll') { saveAll_(body.db || {}); return output_({ ok: true, savedAt: new Date().toISOString() }, e); }\n    if (body.action === 'loadAll') return output_({ ok: true, db: loadAll_() }, e);\n    return output_({ ok: false, error: 'Action inconnue' }, e);\n  } catch (err) { return output_({ ok: false, error: String(err.message || err) }, e); }\n}\n\nfunction ss_() {\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  if (!ss) throw new Error('Ouvrez le script depuis un Google Sheet.');\n  return ss;\n}\nfunction saveAll_(db) { const ss = ss_(); TABLES.forEach(name => write_(ss, name, Array.isArray(db[name]) ? db[name] : [])); meta_(ss); }\nfunction loadAll_() { const ss = ss_(); const db = {}; TABLES.forEach(name => db[name] = read_(ss, name)); return db; }\nfunction write_(ss, name, rows) {\n  const sh = ss.getSheetByName(name) || ss.insertSheet(name);\n  const headers = HEADERS[name]; sh.clearContents();\n  sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#1f6b4a').setFontColor('#ffffff');\n  if (rows.length) sh.getRange(2, 1, rows.length, headers.length).setValues(rows.map(r => headers.map(h => encode_(r[h]))));\n  sh.setFrozenRows(1); sh.autoResizeColumns(1, headers.length);\n}\nfunction read_(ss, name) {\n  const sh = ss.getSheetByName(name); if (!sh || sh.getLastRow() < 2) return [];\n  const values = sh.getDataRange().getValues(); const headers = values.shift();\n  return values.filter(r => r.some(c => c !== '')).map(row => { const obj = {}; headers.forEach((h, i) => obj[h] = decode_(row[i])); return obj; });\n}\nfunction encode_(v) { return v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : v; }\nfunction decode_(v) { if (v === '') return ''; if (typeof v !== 'string') return v; const t = v.trim(); if ((t[0] === '{' && t[t.length - 1] === '}') || (t[0] === '[' && t[t.length - 1] === ']')) { try { return JSON.parse(t); } catch (err) {} } return v; }\nfunction meta_(ss) { const sh = ss.getSheetByName('_meta') || ss.insertSheet('_meta'); sh.clearContents(); sh.getRange(1, 1, 2, 2).setValues([['cle','valeur'], ['lastSync', new Date().toISOString()]]); }\nfunction output_(payload, e) { const callback = e && e.parameter && e.parameter.callback; const text = callback ? callback + '(' + JSON.stringify(payload) + ')' : JSON.stringify(payload); return ContentService.createTextOutput(text).setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON); }`;
 }
 
-function decode_(value) {
-  if (value === '') return '';
-  if (typeof value !== 'string') return value;
-  const text = value.trim();
-  if ((text[0] === '{' && text[text.length - 1] === '}') || (text[0] === '[' && text[text.length - 1] === ']')) {
-    try {
-      return JSON.parse(text);
-    } catch (err) {}
+function exportJson(){
+  download(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),'madina-centre-commercial-backup.json');
+  toast('Export JSON gÃ©nÃ©rÃ©');
+}
+function exportCsv(id){
+  const mod=MODULE_MAP[id], rows=moduleRows(id), headers=['id',...mod.fields.map(f=>f[0])];
+  const csv=[headers.join(',')].concat(rows.map(r=>headers.map(h=>`"${String(r[h]??'').replace(/"/g,'""')}"`).join(','))).join('\n');
+  download(new Blob([csv],{type:'text/csv;charset=utf-8'}),'madina-'+id+'.csv');
+}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},200)}
+function importJson(file){
+  if(!requireAdmin('importer des donnÃ©es'))return;
+  const reader=new FileReader();
+  reader.onload=()=>{try{const data=JSON.parse(reader.result);state=data.db?data:data.state;if(!state.db)throw new Error('Format invalide');TABLES.forEach(t=>{if(!Array.isArray(state.db[t]))state.db[t]=[]});audit('Import','systeme','JSON','Import JSON local');save();render();toast('Import JSON terminÃ©')}catch(e){toast('Import impossible : '+e.message)}};
+  reader.readAsText(file);
+}
+function exportExcel(){
+  recalculateAll();
+  const sheets=TABLES.map(id=>{
+    const mod=MODULE_MAP[id], headers=['id',...mod.fields.map(f=>f[0])];
+    const rows=moduleRows(id);
+    return `<h2 data-sheet="${esc(id)}">${esc(id)}</h2><table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${headers.map(h=>`<td>${esc(r[h]??'')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  }).join('<br>');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:4px}th{background:#1f6b4a;color:#fff}</style></head><body>${sheets}</body></html>`;
+  download(new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'}),'madina-centre-commercial.xls');
+  if(canEdit()){audit('Export','systeme','Excel','Export Excel compatible');save(true,false)}
+  toast('Export Excel gÃ©nÃ©rÃ©');
+}
+function importExcel(file){
+  if(!requireAdmin('importer des donnÃ©es'))return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const doc=new DOMParser().parseFromString(reader.result,'text/html');
+      const db={};TABLES.forEach(t=>db[t]=[]);
+      doc.querySelectorAll('h2[data-sheet]').forEach(h=>{
+        const id=h.dataset.sheet;
+        const table=h.nextElementSibling;
+        if(!MODULE_MAP[id]||!table)return;
+        const headers=Array.from(table.querySelectorAll('thead th')).map(th=>th.textContent.trim());
+        db[id]=Array.from(table.querySelectorAll('tbody tr')).map(tr=>{
+          const obj={};Array.from(tr.children).forEach((td,i)=>obj[headers[i]]=td.textContent);return obj;
+        }).filter(r=>Object.values(r).some(v=>String(v||'').trim()));
+      });
+      state.db=ensureDbTables(db);
+      migrateState(state);
+      audit('Import','systeme','Excel','Import Excel compatible');
+      save();
+      render();
+      toast('Import Excel terminÃ©');
+    }catch(e){toast('Import Excel impossible : '+e.message)}
+  };
+  reader.readAsText(file);
+}
+async function testBackend(){
+  const url=(localStorage.getItem(URL_KEY)||document.getElementById('sheetsUrl')?.value||'').trim();
+  if(!url){toast('Ajoutez une URL Apps Script');return}
+  try{const res=await jsonp(url+'?action=ping');toast(res.ok?'Backend actif':'RÃ©ponse backend non valide')}catch(e){toast('Test Ã©chouÃ© : '+e.message)}
+}
+function ensureDbTables(db){TABLES.forEach(t=>{if(!Array.isArray(db[t]))db[t]=[]});return db}
+function dbSignature(db){
+  const normalizeRow=row=>Object.keys(row||{}).sort().map(k=>[k,String(row[k]??'')]);
+  return TABLES.map(t=>{
+    const rows=Array.isArray(db[t])?db[t]:[];
+    return t+':'+rows.length+':'+rows.map(r=>JSON.stringify(normalizeRow(r))).sort().join('|');
+  }).join(';');
+}
+function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+async function loadSheets(){
+  const url=(localStorage.getItem(URL_KEY)||document.getElementById('sheetsUrl')?.value||'').trim();
+  if(!url){navigate('settings');toast('Configurez dâ€™abord lâ€™URL Apps Script');return}
+  try{
+    const res=await jsonp(url+'?action=loadAll');
+    if(!res.ok||!res.db)throw new Error(res.error||'rÃ©ponse backend non valide');
+    state.db=ensureDbTables(res.db);
+    migrateState(state);
+    save(true,false);
+    render();
+    toast('DonnÃ©es chargÃ©es depuis Google Sheets');
+  }catch(e){toast('Chargement Sheets Ã©chouÃ© : '+e.message)}
+}
+async function syncSheets(manual=true){
+  if(!requireAdmin('synchroniser Google Sheets'))return;
+  const url=localStorage.getItem(URL_KEY);
+  if(!url){navigate('settings');toast('Configurez dâ€™abord lâ€™URL Apps Script');return}
+  try{
+    syncing=true;renderSyncInfo('Synchronisation en cours');
+    recalculateAll();
+    const expected=dbSignature(state.db);
+    await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveAll',db:state.db})});
+    await delay(1600);
+    const check=await jsonp(url+'?action=loadAll');
+    if(!check.ok||!check.db)throw new Error(check.error||'vÃ©rification impossible');
+    const actual=dbSignature(check.db);
+    if(actual!==expected)throw new Error('les donnÃ©es relues ne correspondent pas encore aux donnÃ©es locales');
+    state.updatedAt=new Date().toISOString();
+    localStorage.setItem(STORE,JSON.stringify(state));
+    syncing=false;renderSyncInfo('Google Sheets Ã  jour');
+    if(manual)toast('Synchronisation Google Sheets confirmÃ©e');
+  }catch(e){
+    syncing=false;renderSyncInfo('Sync Ã  vÃ©rifier');
+    toast('Sync non confirmÃ©e : '+e.message);
   }
-  return value;
+}
+function jsonp(url){
+  return new Promise((resolve,reject)=>{
+    const cb='madina_cb_'+Date.now();const sep=url.includes('?')?'&':'?';
+    const s=document.createElement('script');const timer=setTimeout(()=>{cleanup();reject(new Error('dÃ©lai dÃ©passÃ©'))},12000);
+    window[cb]=data=>{cleanup();resolve(data)};s.onerror=()=>{cleanup();reject(new Error('rÃ©seau ou URL invalide'))};
+    function cleanup(){clearTimeout(timer);delete window[cb];s.remove()}
+    s.src=url+sep+'callback='+cb;document.body.appendChild(s);
+  });
+}
+function generateRents(){
+  if(!requireAdmin('gÃ©nÃ©rer les loyers'))return;
+  const existing=new Set(moduleRows('loyers').map(r=>r.boutiqueCode+'|'+r.mois));
+  moduleRows('inventaire').filter(b=>b.statut==='OccupÃ©').forEach(b=>{const key=b.codeEspace+'|'+monthNow();if(!existing.has(key))moduleRows('loyers').push({id:friendlyId('loyers'),boutiqueCode:b.codeEspace,locataire:b.nomLocataireOfficiel,mois:monthNow(),montant:b.loyerMensuel,paye:0,solde:b.loyerMensuel,statut:'ImpayÃ©',datePaiement:'',modePaiement:'',reference:'',notes:''})});
+  audit('Generation loyers','loyers',monthNow(),'Generation automatique des loyers du mois');
+  save();navigate('loyers');toast('Loyers du mois gÃ©nÃ©rÃ©s');
+}
+function checkLock(){
+  const unlocked=sessionStorage.getItem(ADMIN_KEY)==='1' && !!sessionStorage.getItem(ROLE_KEY);
+  document.getElementById('lockScreen').classList.toggle('show',!unlocked);
+  if(!localStorage.getItem(PASS_KEY))localStorage.setItem(PASS_KEY,DEFAULT_PASS);
+  if(!localStorage.getItem(VIEWER_PASS_KEY))localStorage.setItem(VIEWER_PASS_KEY,DEFAULT_VIEWER_PASS);
+  applyRoleUi();
+}
+function unlock(){
+  const pass=document.getElementById('lockPassword').value.trim();
+  const adminPass=localStorage.getItem(PASS_KEY)||DEFAULT_PASS;
+  const viewerPass=localStorage.getItem(VIEWER_PASS_KEY)||DEFAULT_VIEWER_PASS;
+  if(pass===adminPass||pass===DEFAULT_PASS){sessionStorage.setItem(ADMIN_KEY,'1');sessionStorage.setItem(ROLE_KEY,'admin');document.getElementById('lockScreen').classList.remove('show');render();toast('AccÃ¨s admin dÃ©verrouillÃ©')}
+  else if(pass===viewerPass||pass===DEFAULT_VIEWER_PASS){sessionStorage.setItem(ADMIN_KEY,'1');sessionStorage.setItem(ROLE_KEY,'viewer');document.getElementById('lockScreen').classList.remove('show');render();toast('AccÃ¨s lecteur dÃ©verrouillÃ©')}
+  else toast('Mot de passe incorrect');
+}
+function resetAccess(){
+  localStorage.setItem(PASS_KEY,DEFAULT_PASS);
+  localStorage.setItem(VIEWER_PASS_KEY,DEFAULT_VIEWER_PASS);
+  sessionStorage.removeItem(ADMIN_KEY);
+  sessionStorage.removeItem(ROLE_KEY);
+  document.getElementById('lockPassword').value='';
+  checkLock();
+  toast('AccÃ¨s rÃ©initialisÃ©: admin 1234, lecteur 0000');
 }
 
-function meta_(ss) {
-  const sh = ss.getSheetByName('_meta') || ss.insertSheet('_meta');
-  sh.clearContents();
-  sh.getRange(1, 1, 2, 2).setValues([
-    ['cle', 'valeur'],
-    ['lastSync', new Date().toISOString()]
-  ]);
-}
-
-function output_(payload, e) {
-  const callback = e && e.parameter && e.parameter.callback;
-  const text = callback ? callback + '(' + JSON.stringify(payload) + ')' : JSON.stringify(payload);
-  return ContentService
-    .createTextOutput(text)
-    .setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
-}
-
+document.getElementById('exportJsonBtn').onclick=exportJson;
+document.getElementById('exportExcelBtn').onclick=exportExcel;
+document.getElementById('loadSheetsBtn').onclick=loadSheets;
+document.getElementById('syncBtn').onclick=syncSheets;
+document.getElementById('importJson').addEventListener('change',e=>{if(e.target.files[0])importJson(e.target.files[0])});
+document.getElementById('importExcel').addEventListener('change',e=>{if(e.target.files[0])importExcel(e.target.files[0])});
+document.getElementById('modalBack').addEventListener('click',e=>{if(e.target.id==='modalBack')closeModal()});
+document.getElementById('unlockBtn').onclick=unlock;
+document.getElementById('resetAccessBtn').onclick=resetAccess;
+document.getElementById('lockPassword').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
+window.navigate=navigate;window.openForm=openForm;window.deleteRow=deleteRow;window.exportCsv=exportCsv;window.closeModal=closeModal;window.closeReceipt=closeReceipt;window.openReceipt=openReceipt;window.generateRents=generateRents;window.loadSheets=loadSheets;window.closeCash=closeCash;window.createReminder=createReminder;window.printMonthlySummary=printMonthlySummary;
+render();
+checkLock();
+</script>
+</body>
+</html>
