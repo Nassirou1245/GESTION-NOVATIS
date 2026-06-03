@@ -118,6 +118,9 @@ const MODULES=[
   {id:'caisse',group:'Finances',icon:'CAI',title:'Caisse',sub:'Controle journalier du cash, ecarts, caissiers et clotures.',key:'date',fields:[
     ['date','Date','date'],['caissier','Caissier','text'],['soldeOuverture','Solde ouverture','money'],['entrees','Entrees','money'],['sorties','Sorties','money'],['soldeTheorique','Solde theorique','money'],['cashReel','Cash reel','money'],['ecart','Ecart','money'],['statut','Statut','select','Conforme|Ecart a justifier|Cloture'],['notes','Notes','textarea']
   ]},
+  {id:'mouvementsCaisse',group:'Finances',icon:'MVT',title:'Mouvements caisse',sub:'Journal chronologique des ouvertures, entrees, sorties, soldes et justificatifs.',key:'dateHeure',fields:[
+    ['dateHeure','Date heure','datetime-local'],['caisseDate','Jour caisse','date'],['type','Type','select','Ouverture|Entree|Sortie|Ajustement'],['reference','Reference','text'],['source','Source','select','AUTO|MANUEL|Paiement|Revenu|Depense|Depot'],['libelle','Libelle','text'],['entree','Entree','money'],['sortie','Sortie','money'],['soldeApres','Solde apres','money'],['mode','Mode','text'],['responsable','Responsable','text'],['statut','Statut','select','Trace|A justifier|Valide'],['justificatif','Justificatif','text'],['notes','Notes','textarea']
+  ]},
   {id:'depots',group:'Finances',icon:'DPT',title:'Depots bancaires',sub:'Bordereaux, depots prepares, rapprochement banque et statut de validation.',key:'reference',fields:[
     ['date','Date','date'],['reference','Reference depot','text'],['banque','Banque','text'],['montant','Montant','money'],['deposant','Deposant','text'],['statut','Statut','select','Prepare|Depose|Confirme|Ecart'],['notes','Notes','textarea']
   ]},
@@ -151,7 +154,7 @@ const ALL_NAV=[NAV_EXTRA[0],...MODULES,NAV_EXTRA[1],NAV_EXTRA[2],NAV_EXTRA[3]];
 const TABLES=MODULES.map(m=>m.id);
 const MODULE_MAP=Object.fromEntries(MODULES.map(m=>[m.id,m]));
 const ID_PREFIX={
-  locataires:'LOC',contrats:'CTR',loyers:'LOY',depenses:'DEP',paiements:'PAY',caisse:'CAI',
+  locataires:'LOC',contrats:'CTR',loyers:'LOY',depenses:'DEP',paiements:'PAY',caisse:'CAI',mouvementsCaisse:'MVT',
   depots:'DPT',revenus:'REV',personnel:'PER',inventaire:'INV',archives:'ARC',alertes:'ALT'
 };
 ID_PREFIX.audit='AUD';
@@ -218,6 +221,7 @@ function requiredFields(moduleId){
     depenses:['date','categorie','description','montant','modePaiement'],
     paiements:['date','reference','periode','boutiqueCode','payeur','montant','mode','statut'],
     caisse:['date','caissier','soldeOuverture','cashReel','statut'],
+    mouvementsCaisse:['dateHeure','caisseDate','type','libelle','statut'],
     depots:['date','reference','banque','montant','statut'],
     revenus:['date','source','montant','mode','statut'],
     inventaire:['idInventaire','codeEspace','typeEspace','loyerMensuel','statut'],
@@ -346,16 +350,59 @@ function recalculateAll(){
     r.solde=Math.max(0,r.montant-r.paye);
     r.statut=rentStatus(r);
   });
+  rebuildCashMovements();
   moduleRows('caisse').forEach(c=>{
     const day=String(c.date||'');
-    const entreesPaiements=sum(moduleRows('paiements').filter(p=>p.date===day && p.statut!=='Annule'),'montant');
-    const entreesRevenus=sum(moduleRows('revenus').filter(r=>r.date===day && r.statut!=='Annule'),'montant');
-    c.entrees=entreesPaiements+entreesRevenus;
-    c.sorties=sum(moduleRows('depenses').filter(d=>d.date===day),'montant');
+    const movements=moduleRows('mouvementsCaisse').filter(m=>m.caisseDate===day && m.type!=='Ouverture');
+    c.entrees=sum(movements,'entree');
+    c.sorties=sum(movements,'sortie');
     c.soldeTheorique=n(c.soldeOuverture)+n(c.entrees)-n(c.sorties);
     c.ecart=n(c.cashReel)-n(c.soldeTheorique);
     c.statut=c.statut==='Cloture'?'Cloture':c.ecart===0?'Conforme':'Ecart a justifier';
   });
+}
+function movementTime(date,hhmm){return (date||today())+'T'+hhmm}
+function rebuildCashMovements(){
+  const manual=moduleRows('mouvementsCaisse').filter(m=>m.source==='MANUEL').map(m=>({
+    ...m,
+    entree:n(m.entree),
+    sortie:n(m.sortie),
+    source:'MANUEL',
+    caisseDate:m.caisseDate||String(m.dateHeure||'').slice(0,10)||today(),
+    statut:m.statut||'A justifier'
+  }));
+  const generated=[];
+  const add=(row)=>generated.push({
+    id:row.id||friendlyId('mouvementsCaisse'),
+    dateHeure:row.dateHeure,
+    caisseDate:row.caisseDate||String(row.dateHeure||'').slice(0,10),
+    type:row.type,
+    reference:row.reference||'',
+    source:row.source||'AUTO',
+    libelle:row.libelle||'',
+    entree:n(row.entree),
+    sortie:n(row.sortie),
+    soldeApres:0,
+    mode:row.mode||'',
+    responsable:row.responsable||'',
+    statut:row.statut||'Trace',
+    justificatif:row.justificatif||row.reference||'',
+    notes:row.notes||''
+  });
+  moduleRows('caisse').forEach(c=>add({id:'MVT-OUV-'+String(c.date||''),dateHeure:movementTime(c.date,'07:00'),caisseDate:c.date,type:'Ouverture',reference:'OUV-'+String(c.date||''),source:'AUTO',libelle:'Solde ouverture caisse',entree:n(c.soldeOuverture),sortie:0,mode:'Cash',responsable:c.caissier,statut:'Trace'}));
+  moduleRows('paiements').filter(p=>p.date && p.statut!=='Annule').forEach(p=>add({id:'MVT-PAY-'+p.id,dateHeure:movementTime(p.date,'10:00'),type:'Entree',reference:p.reference||p.id,source:'Paiement',libelle:(p.source||'Paiement')+' - '+(p.payeur||p.boutiqueCode||''),entree:p.montant,sortie:0,mode:p.mode,responsable:p.collecteur,statut:p.statut==='A verifier'?'A justifier':'Trace'}));
+  moduleRows('revenus').filter(r=>r.date && r.statut!=='Annule').forEach(r=>add({id:'MVT-REV-'+r.id,dateHeure:movementTime(r.date,'11:00'),type:'Entree',reference:r.reference||r.id,source:'Revenu',libelle:(r.source||'Revenu')+' - '+(r.description||r.client||''),entree:r.montant,sortie:0,mode:r.mode,responsable:r.collecteur,statut:r.statut==='A verifier'?'A justifier':'Trace'}));
+  moduleRows('depenses').filter(d=>d.date).forEach(d=>add({id:'MVT-DEP-'+d.id,dateHeure:movementTime(d.date,'14:00'),type:'Sortie',reference:d.id,source:'Depense',libelle:(d.categorie||'Depense')+' - '+(d.description||d.payeA||''),entree:0,sortie:d.montant,mode:d.modePaiement,responsable:d.autorisePar||d.collecteur,statut:'Trace'}));
+  moduleRows('depots').filter(d=>d.date && d.statut!=='Prepare').forEach(d=>add({id:'MVT-DPT-'+d.id,dateHeure:movementTime(d.date,'16:00'),type:'Sortie',reference:d.reference||d.id,source:'Depot',libelle:'Depot bancaire - '+(d.banque||''),entree:0,sortie:d.montant,mode:'Depot banque',responsable:d.deposant,statut:d.statut==='Ecart'?'A justifier':'Trace'}));
+  const all=[...generated,...manual].sort((a,b)=>String(a.dateHeure).localeCompare(String(b.dateHeure))||String(a.reference).localeCompare(String(b.reference)));
+  const balances={};
+  all.forEach(m=>{
+    const day=m.caisseDate||String(m.dateHeure||'').slice(0,10);
+    if(m.type==='Ouverture')balances[day]=0;
+    balances[day]=(balances[day]||0)+n(m.entree)-n(m.sortie);
+    m.soldeApres=balances[day];
+  });
+  state.db.mouvementsCaisse=all;
 }
 
 function renderNav(){
@@ -455,9 +502,10 @@ function officialInventoryRow(row,cols){
 function renderModule(id){
   if(id==='inventaire'){renderInventory();return}
   if(id==='depenses'){renderExpenses();return}
+  if(id==='caisse'){renderCash();return}
   const mod=MODULE_MAP[id], rows=moduleRows(id);
   const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
-  const visible=mod.fields.slice(0,7);
+  const visible=id==='mouvementsCaisse'?mod.fields.slice(0,10):mod.fields.slice(0,7);
   const extraTools=id==='loyers'&&canEdit()?`<button class="btn primary" onclick="generateRents()">Generer loyers du mois</button>`:'';
   document.getElementById('modulePage').innerHTML=`
     <div class="grid stats">
@@ -474,6 +522,27 @@ function renderModule(id){
       <div class="table-wrap"><table><thead><tr>${visible.map(f=>`<th>${esc(f[1])}</th>`).join('')}<th>Actions</th></tr></thead><tbody>${filtered.map(r=>rowHtml(mod,r,visible)).join('')||`<tr><td colspan="${visible.length+1}" class="empty">Aucune donnee.</td></tr>`}</tbody></table></div>
     </div>`;
   document.getElementById('moduleSearch').addEventListener('input',e=>{search=e.target.value;renderModule(id)});
+}
+function renderCash(){
+  const mod=MODULE_MAP.caisse, rows=moduleRows('caisse');
+  const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
+  const visible=mod.fields.slice(0,9);
+  const totalEntrees=sum(rows,'entrees'), totalSorties=sum(rows,'sorties'), theorique=sum(rows,'soldeTheorique'), ecart=sum(rows,'ecart');
+  document.getElementById('modulePage').innerHTML=`
+    <div class="grid stats">
+      ${stat('Journees caisse',fmt(rows.length),'Sessions suivies')}
+      ${stat('Total entrees',money(totalEntrees),'Paiements + revenus + mouvements')}
+      ${stat('Total sorties',money(totalSorties),'Depenses + depots + mouvements')}
+      ${stat('Ecart cumule',money(ecart),ecart?'A justifier':'Conforme')}
+    </div>
+    <div class="card">
+      <div class="section-head">
+        <div><h3>Controle de caisse</h3><p>Solde ouverture, entrees, sorties, solde theorique, cash reel et ecart avec tracabilite.</p></div>
+        <div class="tools"><input class="search" id="moduleSearch" placeholder="Rechercher" value="${esc(search)}"><button class="btn" onclick="navigate('mouvementsCaisse')">Mouvements</button><button class="btn" onclick="exportCsv('caisse')">CSV</button>${canEdit()?`<button class="btn primary" onclick="openForm('caisse')">Nouvelle journee</button>`:''}</div>
+      </div>
+      <div class="table-wrap"><table><thead><tr>${visible.map(f=>`<th>${esc(f[1])}</th>`).join('')}<th>Actions</th></tr></thead><tbody>${filtered.map(r=>rowHtml(mod,r,visible)).join('')||`<tr><td colspan="${visible.length+1}" class="empty">Aucune journee caisse.</td></tr>`}</tbody></table></div>
+    </div>`;
+  document.getElementById('moduleSearch').addEventListener('input',e=>{search=e.target.value;renderCash()});
 }
 function renderExpenses(){
   const mod=MODULE_MAP.depenses, rows=moduleRows('depenses');
@@ -513,9 +582,19 @@ function sumMoneyFields(rows,mod){
 function rowHtml(mod,row,fields){
   const receipt=mod.id==='paiements'?` <button class="btn sm primary" onclick="openReceipt('${row.id}')">Recu</button>`:'';
   const close=canEdit()&&mod.id==='caisse'&&row.statut!=='Cloture'?` <button class="btn sm primary" onclick="closeCash('${row.id}')">Cloturer</button>`:'';
+  const journal=mod.id==='caisse'?` <button class="btn sm" onclick="openCashJournal('${esc(row.date||'')}')">Journal</button>`:'';
   const edit=canEdit()?` <button class="btn sm" onclick="openForm('${mod.id}','${row.id}')">Modifier</button> <button class="btn sm danger" onclick="deleteRow('${mod.id}','${row.id}')">Supprimer</button>`:' Lecture seule';
-  const actions=mod.id==='audit'?'':`${receipt}${close}${edit}`;
+  const actions=mod.id==='audit'?'':`${receipt}${close}${journal}${edit}`;
   return `<tr>${fields.map(f=>`<td>${cell(row[f[0]],f)}</td>`).join('')}<td>${actions}</td></tr>`;
+}
+function openCashJournal(day){
+  currentPage='modulePage';
+  currentModule='mouvementsCaisse';
+  search=day||'';
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===currentPage));
+  document.getElementById('pageTitle').textContent='Mouvements caisse';
+  document.getElementById('pageSub').textContent=day?'Journal chronologique du '+day:'Journal chronologique des mouvements de caisse';
+  render();
 }
 function cell(v,f){if(f[2]==='money')return money(v);if(f[2]==='select')return badge(v);if(f[2]==='url'&&v)return `<a href="${esc(v)}" target="_blank">Ouvrir</a>`;if(f[2]==='file')return v?`<a href="${esc(v)}" download>Telecharger</a>`:'';return esc(v||'')}
 function openForm(moduleId,rowId=''){
@@ -903,7 +982,7 @@ document.getElementById('modalBack').addEventListener('click',e=>{if(e.target.id
 document.getElementById('unlockBtn').onclick=unlock;
 document.getElementById('resetAccessBtn').onclick=resetAccess;
 document.getElementById('lockPassword').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
-window.navigate=navigate;window.openForm=openForm;window.deleteRow=deleteRow;window.exportCsv=exportCsv;window.closeModal=closeModal;window.closeReceipt=closeReceipt;window.openReceipt=openReceipt;window.generateRents=generateRents;window.loadSheets=loadSheets;window.closeCash=closeCash;window.createReminder=createReminder;window.printMonthlySummary=printMonthlySummary;
+window.navigate=navigate;window.openForm=openForm;window.deleteRow=deleteRow;window.exportCsv=exportCsv;window.closeModal=closeModal;window.closeReceipt=closeReceipt;window.openReceipt=openReceipt;window.generateRents=generateRents;window.loadSheets=loadSheets;window.closeCash=closeCash;window.openCashJournal=openCashJournal;window.createReminder=createReminder;window.printMonthlySummary=printMonthlySummary;
 render();
 checkLock();
 </script>
