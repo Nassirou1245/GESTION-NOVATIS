@@ -90,6 +90,8 @@
 <script>
 const STORE='madina_gestion_complete_v2';
 const URL_KEY='madina_apps_script_url_v2';
+const LAST_SYNC_KEY='madina_last_sync_verified_v2';
+const LAST_SYNC_STATUS_KEY='madina_last_sync_status_v2';
 const ADMIN_KEY='madina_admin_unlocked_v2';
 const ROLE_KEY='madina_user_role_v2';
 const PASS_KEY='madina_admin_password_v2';
@@ -475,9 +477,11 @@ function navigate(id){
 function render(){renderNav();renderSyncInfo();if(currentPage==='dashboard')renderDashboard();if(currentPage==='modulePage')renderModule(currentModule);if(currentPage==='impayes')renderImpayes();if(currentPage==='reports')renderReports();if(currentPage==='documentation')renderDocumentation();if(currentPage==='settings')renderSettings();applyRoleUi()}
 function renderSyncInfo(message=''){
   const url=localStorage.getItem(URL_KEY)||'';
+  const last=localStorage.getItem(LAST_SYNC_KEY)||'';
+  const status=localStorage.getItem(LAST_SYNC_STATUS_KEY)||'';
   const dot=document.getElementById('syncDot'), txt=document.getElementById('syncText');
-  dot.className='dot '+(syncing?'warn':url?'ok':'warn');
-  const base=message||(syncing?'Synchronisation en cours':url?'Backend configure':'Mode local actif');
+  dot.className='dot '+(syncing?'warn':status==='error'?'err':url&&last?'ok':url?'warn':'warn');
+  const base=message||(syncing?'Synchronisation en cours':url&&last?'Sheets verifie '+new Date(last).toLocaleString('fr-FR'):url?'Backend configure, verification attendue':'Mode local actif');
   txt.textContent=base+(currentRole()?' - '+roleLabel():'');
 }
 function badge(v){
@@ -533,7 +537,7 @@ function renderDashboard(){
       <div class="card"><div class="section-head"><h3>Actions rapides</h3></div><div class="pad actions"><button class="btn" onclick="navigate('loyers')">Loyers</button><button class="btn" onclick="navigate('paiements')">Paiements</button><button class="btn" onclick="navigate('caisse')">Caisse</button><button class="btn" onclick="navigate('mouvementsCaisse')">Mouvements caisse</button><button class="btn" onclick="navigate('depots')">Depots</button><button class="btn" onclick="navigate('mouvementsBanque')">Mouvements banque</button><button class="btn" onclick="printMonthlySummary('${month}')">Imprimer mois</button></div></div>
     </div>
     <div class="grid tri" style="margin-top:14px">
-      <div class="card pad"><h3>Modules actifs</h3><p>${MODULES.length} modules documentes et synchronisables avec Google Sheets.</p></div>
+      <div class="card pad"><h3>Acces</h3><p>${canEdit()?'Mode admin: modification complete.':'Mode lecteur boss: consultation seule, aucune modification possible.'}</p></div>
       <div class="card pad"><h3>Stockage local</h3><p>Derniere mise a jour : ${new Date(state.updatedAt).toLocaleString('fr-FR')}</p></div>
       <div class="card pad"><h3>Backend</h3><p>${localStorage.getItem(URL_KEY)?'URL Apps Script configuree.':'Aucune URL Apps Script enregistree.'}</p></div>
     </div>`;
@@ -581,7 +585,7 @@ function renderModule(id){
   const mod=MODULE_MAP[id], rows=moduleRows(id);
   const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
   const visible=(id==='mouvementsCaisse'||id==='mouvementsBanque')?mod.fields.slice(0,10):mod.fields.slice(0,7);
-  const extraTools=id==='loyers'&&canEdit()?`<button class="btn primary" onclick="generateRents()">Generer loyers du mois</button>`:'';
+  const extraTools=id==='loyers'&&canEdit()?`<button class="btn primary" onclick="generateRents()">Generer loyers du mois</button>`:id==='mouvementsCaisse'?`<button class="btn" onclick="printCashJournal()">Imprimer journal</button>`:id==='mouvementsBanque'?`<button class="btn" onclick="printBankJournal()">Imprimer journal</button>`:'';
   document.getElementById('modulePage').innerHTML=`
     <div class="grid stats">
       ${stat('Enregistrements',fmt(rows.length),'Total module')}
@@ -680,6 +684,28 @@ function openBankJournal(filter=''){
   document.getElementById('pageTitle').textContent='Mouvements banque';
   document.getElementById('pageSub').textContent=filter?'Journal bancaire filtre sur '+filter:'Journal chronologique des mouvements bancaires';
   render();
+}
+function printableRows(title,rows,cols){
+  const modal=document.getElementById('modal');
+  modal.className='modal receipt-modal';
+  modal.innerHTML=`<header><h3>${esc(title)}</h3><button class="btn sm" onclick="closeModal()">Fermer</button></header>
+    <div class="receipt-actions"><button class="btn primary" onclick="window.print()">Imprimer</button></div>
+    <div class="receipt"><table>
+      <tr><td class="r-blue r-title" colspan="${cols.length}">${esc(title)}</td></tr>
+      <tr>${cols.map(c=>`<th>${esc(c[1])}</th>`).join('')}</tr>
+      ${rows.map(r=>`<tr>${cols.map(c=>`<td>${cell(r[c[0]],c)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${cols.length}">Aucun mouvement.</td></tr>`}
+    </table></div>`;
+  document.getElementById('modalBack').classList.add('show');
+}
+function printCashJournal(day=''){
+  const filter=day||search||'';
+  const rows=moduleRows('mouvementsCaisse').filter(m=>!filter||String(m.caisseDate).includes(filter)||JSON.stringify(m).toLowerCase().includes(String(filter).toLowerCase()));
+  printableRows('Journal caisse '+(filter||'complet'),rows,MODULE_MAP.mouvementsCaisse.fields.slice(0,10));
+}
+function printBankJournal(filter=''){
+  const q=filter||search||'';
+  const rows=moduleRows('mouvementsBanque').filter(m=>!q||JSON.stringify(m).toLowerCase().includes(String(q).toLowerCase()));
+  printableRows('Journal banque '+(q||'complet'),rows,MODULE_MAP.mouvementsBanque.fields.slice(0,10));
 }
 function cell(v,f){if(f[2]==='money')return money(v);if(f[2]==='select')return badge(v);if(f[2]==='url'&&v)return `<a href="${esc(v)}" target="_blank">Ouvrir</a>`;if(f[2]==='file')return v?`<a href="${esc(v)}" download>Telecharger</a>`:'';return esc(v||'')}
 function openForm(moduleId,rowId=''){
@@ -885,6 +911,8 @@ function renderSettings(){
       <div class="url-row"><input id="sheetsUrl" value="${esc(localStorage.getItem(URL_KEY)||'')}" placeholder="https://script.google.com/macros/s/VOTRE_ID/exec"><button class="btn primary admin-only" id="saveUrlBtn">Enregistrer</button><button class="btn" id="testUrlBtn">Tester</button></div>
       <div class="actions" style="margin-top:10px"><button class="btn" id="loadUrlBtn">Charger depuis Sheets</button><button class="btn primary admin-only" id="syncUrlBtn">Sauvegarder et verifier</button></div>
     </div>
+    <div class="card"><h3>Etat synchronisation</h3><p>${localStorage.getItem(LAST_SYNC_KEY)?'Derniere sauvegarde verifiee : '+new Date(localStorage.getItem(LAST_SYNC_KEY)).toLocaleString('fr-FR'):'Aucune sauvegarde Sheets verifiee pour le moment.'}</p><p>Statut : ${esc(localStorage.getItem(LAST_SYNC_STATUS_KEY)||'local')}</p></div>
+    <div class="card"><h3>Test navigateur</h3><p>Controle rapide apres chaque mise a jour : dashboard, modules, acces, encodage et fonctions critiques.</p><button class="btn primary" id="selfTestBtn">Tester interface</button></div>
     <div class="card">
       <h3>Installation Apps Script</h3>
       <div class="steps">
@@ -902,6 +930,7 @@ function renderSettings(){
   document.getElementById('testUrlBtn').onclick=testBackend;
   document.getElementById('loadUrlBtn').onclick=loadSheets;
   document.getElementById('syncUrlBtn').onclick=syncSheets;
+  document.getElementById('selfTestBtn').onclick=runBrowserSelfTest;
   document.getElementById('savePassBtn').onclick=()=>{if(!requireAdmin('changer les mots de passe'))return;const a=document.getElementById('adminPass').value.trim();const v=document.getElementById('viewerPass').value.trim();if(a&&a.length<4){toast('Mot de passe admin trop court');return}if(v&&v.length<4){toast('Mot de passe lecteur trop court');return}if(a)localStorage.setItem(PASS_KEY,a);if(v)localStorage.setItem(VIEWER_PASS_KEY,v);audit('Securite','systeme','password','Mots de passe mis a jour');save(true,false);toast('Mots de passe mis a jour')};
   document.getElementById('lockBtn').onclick=()=>{sessionStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem(ROLE_KEY);checkLock()};
   document.getElementById('exportExcelSettingsBtn').onclick=exportExcel;
@@ -1009,9 +1038,12 @@ async function syncSheets(manual=true){
     if(actual!==expected)throw new Error('les donnees relues ne correspondent pas encore aux donnees locales');
     state.updatedAt=new Date().toISOString();
     localStorage.setItem(STORE,JSON.stringify(state));
+    localStorage.setItem(LAST_SYNC_KEY,new Date().toISOString());
+    localStorage.setItem(LAST_SYNC_STATUS_KEY,'ok');
     syncing=false;renderSyncInfo('Google Sheets a jour');
     if(manual)toast('Synchronisation Google Sheets confirmee');
   }catch(e){
+    localStorage.setItem(LAST_SYNC_STATUS_KEY,'error');
     syncing=false;renderSyncInfo('Sync a verifier');
     toast('Sync non confirmee : '+e.message);
   }
@@ -1024,6 +1056,21 @@ function jsonp(url){
     function cleanup(){clearTimeout(timer);delete window[cb];s.remove()}
     s.src=url+sep+'callback='+cb;document.body.appendChild(s);
   });
+}
+function runBrowserSelfTest(){
+  const checks=[
+    ['Dashboard KPI',document.getElementById('dashboard').innerHTML.includes('Espaces totaux')&&document.getElementById('dashboard').innerHTML.includes('Solde banque')],
+    ['Mouvements caisse',!!MODULE_MAP.mouvementsCaisse&&typeof printCashJournal==='function'],
+    ['Mouvements banque',!!MODULE_MAP.mouvementsBanque&&typeof printBankJournal==='function'],
+    ['Lecture seule boss',typeof canEdit==='function'&&DEFAULT_VIEWER_PASS==='0000'&&DEFAULT_PASS==='1234'],
+    ['Encodage propre',!new RegExp('[\\u00c3\\u00f0\\u00e2\\u00c2]').test(document.body.innerText)],
+    ['Google Sheets config',typeof syncSheets==='function'&&typeof loadSheets==='function']
+  ];
+  const failed=checks.filter(c=>!c[1]).map(c=>c[0]);
+  const msg=failed.length?'Test interface a verifier: '+failed.join(', '):'Test interface OK: dashboard, caisse, banque, sync et acces.';
+  if(canEdit())audit('Test navigateur','systeme','self-test',msg);
+  toast(msg);
+  return {ok:!failed.length,failed};
 }
 function generateRents(){
   if(!requireAdmin('generer les loyers'))return;
@@ -1067,7 +1114,7 @@ document.getElementById('modalBack').addEventListener('click',e=>{if(e.target.id
 document.getElementById('unlockBtn').onclick=unlock;
 document.getElementById('resetAccessBtn').onclick=resetAccess;
 document.getElementById('lockPassword').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
-window.navigate=navigate;window.openForm=openForm;window.deleteRow=deleteRow;window.exportCsv=exportCsv;window.closeModal=closeModal;window.closeReceipt=closeReceipt;window.openReceipt=openReceipt;window.generateRents=generateRents;window.loadSheets=loadSheets;window.closeCash=closeCash;window.openCashJournal=openCashJournal;window.openBankJournal=openBankJournal;window.createReminder=createReminder;window.printMonthlySummary=printMonthlySummary;
+window.navigate=navigate;window.openForm=openForm;window.deleteRow=deleteRow;window.exportCsv=exportCsv;window.closeModal=closeModal;window.closeReceipt=closeReceipt;window.openReceipt=openReceipt;window.generateRents=generateRents;window.loadSheets=loadSheets;window.closeCash=closeCash;window.openCashJournal=openCashJournal;window.openBankJournal=openBankJournal;window.printCashJournal=printCashJournal;window.printBankJournal=printBankJournal;window.runBrowserSelfTest=runBrowserSelfTest;window.createReminder=createReminder;window.printMonthlySummary=printMonthlySummary;
 render();
 checkLock();
 </script>
