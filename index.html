@@ -490,20 +490,47 @@ function badge(v){
   return `<span class="badge ${cls}">${esc(s||'-')}</span>`;
 }
 function renderDashboard(){
-  const espaces=moduleRows('inventaire'), loyers=moduleRows('loyers'), sorties=moduleRows('depenses'), revenus=moduleRows('revenus');
-  const occupied=espaces.filter(b=>b.statut==='Occupe').length;
+  const espaces=moduleRows('inventaire'), loyers=moduleRows('loyers'), sorties=moduleRows('depenses'), revenus=moduleRows('revenus'), caisse=moduleRows('caisse'), banque=moduleRows('mouvementsBanque'), cashMoves=moduleRows('mouvementsCaisse');
+  const occupied=espaces.filter(b=>b.statut==='Occupe').length, totalSpaces=espaces.length, vacant=espaces.filter(b=>b.statut==='Vacant').length;
   const rentDue=sum(loyers,'montant'), rentPaid=sum(loyers,'paye'), expenses=sum(sorties,'montant'), other=sum(revenus,'montant');
+  const unpaid=sum(loyers,'solde'), net=rentPaid+other-expenses, cashReal=sum(caisse,'cashReel'), cashGap=sum(caisse,'ecart'), bankBalance=bank.reduce((a,m)=>a+n(m.entree)-n(m.sortie),0);
+  const lateRents=loyers.filter(r=>n(r.solde)>0).sort((a,b)=>n(b.solde)-n(a.solde));
+  const bankPending=bank.filter(m=>/a rapprocher|a verifier|ecart|prepare/i.test(String(m.statut)+' '+String(m.rapprochement)));
+  const cashProblems=caisse.filter(c=>n(c.ecart)!==0||c.statut==='Ecart a justifier');
+  const month=monthNow(), monthData=monthlySummary(month);
+  const cashIn=sum(cashMoves.filter(m=>m.type==='Entree'),'entree'), cashOut=sum(cashMoves.filter(m=>m.type==='Sortie'),'sortie');
   const alerts=[...moduleRows('alertes'),...loyers.filter(r=>n(r.solde)>0).map(r=>({titre:'Solde loyer '+r.boutiqueCode,niveau:'Urgent',details:money(r.solde)+' restant pour '+r.locataire}))];
   document.getElementById('dashboard').innerHTML=`
     <div class="grid stats">
-      ${stat('Espaces occupes',occupied+'/'+espaces.length,espaces.length?pct(occupied/espaces.length):'0%')}
-      ${stat('Recouvrement loyers',money(rentPaid),rentDue?pct(rentPaid/rentDue):'0%')}
-      ${stat('Resultat net',money(rentPaid+other-expenses),'Recettes - depenses')}
-      ${stat('Alertes ouvertes',alerts.length,'Actions a suivre')}
+      ${stat('Espaces totaux',fmt(totalSpaces),'Inventaire officiel')}
+      ${stat('Espaces occupes',fmt(occupied),'Espaces loues')}
+      ${stat('Espaces vacants',fmt(vacant),'Potentiel a louer')}
+      ${stat('Taux occupation',totalSpaces?pct(occupied/totalSpaces):'0%','Occupation du centre')}
+    </div>
+    <div class="grid stats">
+      ${stat('Revenus loyers',money(rentPaid),rentDue?pct(rentPaid/rentDue)+' recouvrement':'Aucun appel')}
+      ${stat('Autres recettes',money(other),'Revenus annexes')}
+      ${stat('Total depenses',money(expenses),'Sorties enregistrees')}
+      ${stat('Solde net',money(net),net>=0?'Benefice courant':'Perte a corriger')}
+    </div>
+    <div class="grid stats">
+      ${stat('Cash reel caisse',money(cashReal),'Argent physique declare')}
+      ${stat('Ecart caisse',money(cashGap),cashGap?'Justification obligatoire':'Conforme')}
+      ${stat('Solde banque',money(bankBalance),bankPending.length+' mouvements a rapprocher')}
+      ${stat('Impayes loyers',money(unpaid),lateRents.length+' lignes a relancer')}
     </div>
     <div class="grid split">
       <div class="card"><div class="section-head"><h3>Occupation par zone</h3><button class="btn sm" onclick="navigate('inventaire')">Voir</button></div><div class="bar-list">${sectorBars(espaces)}</div></div>
       <div class="card"><div class="section-head"><h3>Priorites</h3><button class="btn sm" onclick="navigate('alertes')">Alertes</button></div><div class="pad">${alerts.slice(0,7).map(a=>`<div class="alert"><div><b>${esc(a.titre)}</b><span>${esc(a.details||a.module||'Suivi requis')}</span></div>${badge(a.niveau||'Suivi')}</div>`).join('')||'<div class="empty">Aucune alerte.</div>'}</div></div>
+    </div>
+    <div class="grid tri" style="margin-top:14px">
+      <div class="card"><div class="section-head"><h3>Top impayes</h3><button class="btn sm" onclick="navigate('impayes')">Voir</button></div><div class="pad">${lateRents.slice(0,5).map(r=>`<div class="alert"><div><b>${esc(r.boutiqueCode||'Espace')}</b><span>${esc(r.locataire||'Locataire')} - ${esc(r.mois||'')}</span></div><b>${money(r.solde)}</b></div>`).join('')||'<div class="empty">Aucun impaye.</div>'}</div></div>
+      <div class="card"><div class="section-head"><h3>Ecarts caisse</h3><button class="btn sm" onclick="navigate('caisse')">Caisse</button></div><div class="pad">${cashProblems.slice(0,5).map(c=>`<div class="alert"><div><b>${esc(c.date||'Jour')}</b><span>${esc(c.caissier||'Caissier')} - theorique ${money(c.soldeTheorique)}</span></div><b>${money(c.ecart)}</b></div>`).join('')||'<div class="empty">Aucun ecart caisse.</div>'}</div></div>
+      <div class="card"><div class="section-head"><h3>Banque a rapprocher</h3><button class="btn sm" onclick="navigate('mouvementsBanque')">Banque</button></div><div class="pad">${bankPending.slice(0,5).map(m=>`<div class="alert"><div><b>${esc(m.reference||m.banque||'Mouvement')}</b><span>${esc(m.libelle||m.source||'Rapprochement')}</span></div>${badge(m.rapprochement||m.statut)}</div>`).join('')||'<div class="empty">Banque rapprochee.</div>'}</div></div>
+    </div>
+    <div class="grid split" style="margin-top:14px">
+      <div class="card"><div class="section-head"><h3>Synthese du mois</h3><button class="btn sm" onclick="navigate('reports')">Rapports</button></div><div class="bar-list">${bars([{label:'Loyers',value:monthData.rent},{label:'Revenus',value:monthData.other},{label:'Depenses',value:monthData.expenses},{label:'Impayes',value:monthData.unpaid},{label:'Net',value:Math.max(0,monthData.net)}])}</div></div>
+      <div class="card"><div class="section-head"><h3>Actions rapides</h3></div><div class="pad actions"><button class="btn" onclick="navigate('loyers')">Loyers</button><button class="btn" onclick="navigate('paiements')">Paiements</button><button class="btn" onclick="navigate('caisse')">Caisse</button><button class="btn" onclick="navigate('mouvementsCaisse')">Mouvements caisse</button><button class="btn" onclick="navigate('depots')">Depots</button><button class="btn" onclick="navigate('mouvementsBanque')">Mouvements banque</button><button class="btn" onclick="printMonthlySummary('${month}')">Imprimer mois</button></div></div>
     </div>
     <div class="grid tri" style="margin-top:14px">
       <div class="card pad"><h3>Modules actifs</h3><p>${MODULES.length} modules documentes et synchronisables avec Google Sheets.</p></div>
