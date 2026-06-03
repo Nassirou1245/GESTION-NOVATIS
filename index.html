@@ -113,7 +113,7 @@ const MODULES=[
     ['date','Date','date'],['mois','Mois','text'],['annee','Annee','number'],['categorie','Categorie','select','Nettoyage|Securite|Maintenance|Electricite|Eau|Administration|Autre'],['sousCategorie','Sous_Categorie','text'],['description','Description','text'],['montant','Montant_GNF','money'],['modePaiement','Mode_Paiement','select','Cash|Virement|Orange Money|Cheque|Autre'],['payeA','Paye_a','text'],['autorisePar','Autorise_par','text'],['collecteur','Collecteur','text'],['notes','Notes','textarea']
   ]},
   {id:'paiements',group:'Finances',icon:'PAY',title:'Paiements & recus',sub:'Journal des encaissements avec recu de paiement imprimable pour chaque reglement.',key:'reference',fields:[
-    ['date','Date','date'],['reference','ID du recu','text'],['periode','Loyer du / periode','month'],['source','Source','select','Loyer|Penalite|Parking|Toilettes|Affichage|Location temporaire|Evenement|Autre'],['boutiqueCode','Code espace / ID loyer','text'],['payeur','Nom locataire officiel','text'],['occupantReel','Occupant reel','text'],['telephone','Telephone','text'],['nomCommercial','Nom commercial','text'],['activite','Activite principale','text'],['typeEspace','Type espace','select','Boutique|Conteneur|Table|Kiosque|Autre'],['zone','Zone','text'],['surface','Surface m2','number'],['loyer','Loyer','money'],['arrieres','Arrieres de loyer','money'],['penalites','Penalites de retard','money'],['fraisSecurite','Frais de securite','money'],['fraisAssainissement','Frais  ssainissement','money'],['autres','Autres frais','money'],['montant','Montant paye','money'],['mode','Mode paiement','select','Especes|Virement|Orange Money|Cheque|Autre'],['referencePaiement','Reference paiement','text'],['collecteur','Collecteur','text'],['statut','Statut','select','Confirme|A verifier|Annule'],['notes','Notes','textarea']
+    ['date','Date','date'],['reference','ID du recu','text'],['periode','Loyer du / periode','month'],['source','Source','select','Loyer|Penalite|Parking|Toilettes|Affichage|Location temporaire|Evenement|Autre'],['boutiqueCode','Code espace / ID loyer','text'],['payeur','Nom locataire officiel','text'],['occupantReel','Occupant reel','text'],['telephone','Telephone','text'],['nomCommercial','Nom commercial','text'],['activite','Activite principale','text'],['typeEspace','Type espace','select','Boutique|Conteneur|Table|Kiosque|Autre'],['zone','Zone','text'],['surface','Surface m2','number'],['loyer','Loyer','money'],['arrieres','Arrieres de loyer','money'],['penalites','Penalites de retard','money'],['fraisSecurite','Frais de securite','money'],['fraisAssainissement','Frais assainissement','money'],['autres','Autres frais','money'],['montant','Montant paye','money'],['mode','Mode paiement','select','Especes|Virement|Orange Money|Cheque|Autre'],['referencePaiement','Reference paiement','text'],['collecteur','Collecteur','text'],['statut','Statut','select','Confirme|A verifier|Annule'],['notes','Notes','textarea']
   ]},
   {id:'caisse',group:'Finances',icon:'CAI',title:'Caisse',sub:'Controle journalier du cash, ecarts, caissiers et clotures.',key:'date',fields:[
     ['date','Date','date'],['caissier','Caissier','text'],['soldeOuverture','Solde ouverture','money'],['entrees','Entrees','money'],['sorties','Sorties','money'],['soldeTheorique','Solde theorique','money'],['cashReel','Cash reel','money'],['ecart','Ecart','money'],['statut','Statut','select','Conforme|Ecart a justifier|Cloture'],['notes','Notes','textarea']
@@ -607,7 +607,7 @@ function receiptHtml(p,total,reste){
       ${receiptLine('Arrieres de loyer',p.arrieres,true)}
       ${receiptLine('Penalites de retard',p.penalites)}
       ${receiptLine('Frais de securite',p.fraisSecurite)}
-      ${receiptLine('Frais  ssainissement',p.fraisAssainissement)}
+      ${receiptLine('Frais assainissement',p.fraisAssainissement)}
       ${receiptLine('Autres (a preciser)',p.autres)}
       <tr><td class="r-total" colspan="3">TOTAL</td><td class="r-total">${money(total)}</td></tr>
       <tr><td class="r-total" colspan="3">Montant paye</td><td class="r-total">${money(p.montant)}</td></tr>
@@ -709,7 +709,7 @@ function printMonthlySummary(month=monthNow()){
 }
 function renderDocumentation(){
   document.getElementById('documentation').innerHTML=`
-    <div class="card"><h3>Cahier des charges integre</h3><p>Cette application standalone couvre les ${MODULES.length} modules metiers ci-dessous. Chaque module dispose  n registre, de formulaires CRUD,  ne recherche,  n export CSV,  ne persistance localStorage et  ne synchronisation Google Sheets via Apps Script.</p></div>
+    <div class="card"><h3>Cahier des charges integre</h3><p>Cette application standalone couvre les ${MODULES.length} modules metiers ci-dessous. Chaque module dispose d'un registre, de formulaires CRUD, d'une recherche, d'un export CSV, d'une persistance localStorage et d'une synchronisation Google Sheets via Apps Script.</p></div>
     <div class="doc-grid">${MODULES.map((m,i)=>`<div class="doc-item"><h4>${String(i+1).padStart(2,'0')} - ${esc(m.title)}</h4><p>${esc(m.sub)}</p><p><b>Champs :</b> ${m.fields.map(f=>esc(f[1])).join(', ')}</p></div>`).join('')}</div>`;
 }
 function renderSettings(){
@@ -717,7 +717,7 @@ function renderSettings(){
     <div class="card"><h3>VERSION ADMIN/LECTEUR - 02/06/2026</h3><p>Cette version contient deux acces : Admin 1234 et Lecteur 0000. Si vous voyez encore seulement "Nouveau mot de passe admin", GitHub Pages affiche une ancienne version.</p></div>
     <div class="card">
       <h3>Connexion Google Sheets</h3>
-      <p>Collez  RL de deploiement Web App Apps Script. Sans URL, tout reste disponible en localStorage avec import/export JSON.</p>
+      <p>Collez l'URL de deploiement Web App Apps Script. Sans URL, tout reste disponible en localStorage avec import/export JSON.</p>
       <div class="url-row"><input id="sheetsUrl" value="${esc(localStorage.getItem(URL_KEY)||'')}" placeholder="https://script.google.com/macros/s/VOTRE_ID/exec"><button class="btn primary admin-only" id="saveUrlBtn">Enregistrer</button><button class="btn" id="testUrlBtn">Tester</button></div>
       <div class="actions" style="margin-top:10px"><button class="btn" id="loadUrlBtn">Charger depuis Sheets</button><button class="btn primary admin-only" id="syncUrlBtn">Sauvegarder et verifier</button></div>
     </div>
@@ -727,8 +727,8 @@ function renderSettings(){
         <div class="step">Creez ou ouvrez un Google Sheet pour le centre commercial.</div>
         <div class="step">Extensions &gt; Apps Script, collez le code ci-dessous puis enregistrez.</div>
         <div class="step">Deployer &gt; Nouveau deploiement &gt; Application Web.</div>
-        <div class="step">Executer en tant que vous-meme, acces selon votre politique, puis copiez  RL <code>/exec</code>.</div>
-        <div class="step">Revenez ici, enregistrez  RL, testez, puis utilisez Sync Google Sheets.</div>
+        <div class="step">Executer en tant que vous-meme, acces selon votre politique, puis copiez l'URL <code>/exec</code>.</div>
+        <div class="step">Revenez ici, enregistrez l'URL, testez, puis utilisez Sync Google Sheets.</div>
       </div>
     </div>
     <div class="card"><h3>Securite locale</h3><p>Admin = modification complete. Lecteur = consultation seule. Admin par defaut: 1234. Lecteur par defaut: 0000.</p><div class="url-row"><input id="adminPass" type="password" placeholder="Nouveau mot de passe admin"><input id="viewerPass" type="password" placeholder="Nouveau mot de passe lecteur"><button class="btn primary admin-only" id="savePassBtn">Changer mots de passe</button><button class="btn" id="lockBtn">Verrouiller</button></div></div>
@@ -818,7 +818,7 @@ function dbSignature(db){
 function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
 async function loadSheets(){
   const url=(localStorage.getItem(URL_KEY)||document.getElementById('sheetsUrl')?.value||'').trim();
-  if(!url){navigate('settings');toast('Configurez  bord  RL Apps Script');return}
+  if(!url){navigate('settings');toast("Configurez d'abord l'URL Apps Script");return}
   try{
     const res=await jsonp(url+'?action=loadAll');
     if(!res.ok||!res.db)throw new Error(res.error||'reponse backend non valide');
@@ -832,7 +832,7 @@ async function loadSheets(){
 async function syncSheets(manual=true){
   if(!requireAdmin('synchroniser Google Sheets'))return;
   const url=localStorage.getItem(URL_KEY);
-  if(!url){navigate('settings');toast('Configurez  bord  RL Apps Script');return}
+  if(!url){navigate('settings');toast("Configurez d'abord l'URL Apps Script");return}
   try{
     syncing=true;renderSyncInfo('Synchronisation en cours');
     recalculateAll();
