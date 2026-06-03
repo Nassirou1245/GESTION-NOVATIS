@@ -124,6 +124,9 @@ const MODULES=[
   {id:'depots',group:'Finances',icon:'DPT',title:'Depots bancaires',sub:'Bordereaux, depots prepares, rapprochement banque et statut de validation.',key:'reference',fields:[
     ['date','Date','date'],['reference','Reference depot','text'],['banque','Banque','text'],['montant','Montant','money'],['deposant','Deposant','text'],['statut','Statut','select','Prepare|Depose|Confirme|Ecart'],['notes','Notes','textarea']
   ]},
+  {id:'mouvementsBanque',group:'Finances',icon:'BNQ',title:'Mouvements banque',sub:'Journal chronologique des depots, virements, cheques, sorties bancaires et rapprochements.',key:'dateHeure',fields:[
+    ['dateHeure','Date heure','datetime-local'],['banque','Banque / compte','text'],['type','Type','select','Entree|Sortie|Ajustement'],['reference','Reference','text'],['source','Source','select','AUTO|MANUEL|Depot|Paiement|Revenu|Depense'],['libelle','Libelle','text'],['entree','Entree','money'],['sortie','Sortie','money'],['soldeApres','Solde apres','money'],['mode','Mode','text'],['responsable','Responsable','text'],['statut','Statut','select','Prepare|Depose|Confirme|Ecart|A rapprocher'],['rapprochement','Rapprochement','select','Non rapproche|Rapproche|A verifier'],['notes','Notes','textarea']
+  ]},
   {id:'revenus',group:'Revenus annexes',icon:'REV',title:'Autres revenus',sub:'Parking, toilettes, affichage, penalites et recettes diverses.',key:'source',fields:[
     ['date','Date','date'],['source','Source','select','Parking|Toilettes|Affichage|Location temporaire|Evenement|Penalite|Divers'],['description','Description','text'],['client','Client / source','text'],['zone','Zone','text'],['montant','Montant','money'],['mode','Mode paiement','select','Especes|Orange Money|Virement|Cheque|Autre'],['reference','Reference','text'],['collecteur','Collecteur','text'],['statut','Statut','select','Confirme|A verifier|Annule'],['notes','Notes','textarea']
   ]},
@@ -155,7 +158,7 @@ const TABLES=MODULES.map(m=>m.id);
 const MODULE_MAP=Object.fromEntries(MODULES.map(m=>[m.id,m]));
 const ID_PREFIX={
   locataires:'LOC',contrats:'CTR',loyers:'LOY',depenses:'DEP',paiements:'PAY',caisse:'CAI',mouvementsCaisse:'MVT',
-  depots:'DPT',revenus:'REV',personnel:'PER',inventaire:'INV',archives:'ARC',alertes:'ALT'
+  depots:'DPT',mouvementsBanque:'BNQ',revenus:'REV',personnel:'PER',inventaire:'INV',archives:'ARC',alertes:'ALT'
 };
 ID_PREFIX.audit='AUD';
 ALL_NAV.splice(1,0,{id:'impayes',group:'Pilotage',icon:'!',title:'Impayes & relances',sub:'Liste dediee des soldes ouverts et actions de relance'});
@@ -223,6 +226,7 @@ function requiredFields(moduleId){
     caisse:['date','caissier','soldeOuverture','cashReel','statut'],
     mouvementsCaisse:['dateHeure','caisseDate','type','libelle','statut'],
     depots:['date','reference','banque','montant','statut'],
+    mouvementsBanque:['dateHeure','banque','type','libelle','statut'],
     revenus:['date','source','montant','mode','statut'],
     inventaire:['idInventaire','codeEspace','typeEspace','loyerMensuel','statut'],
     personnel:['nom','role','statut']
@@ -351,6 +355,7 @@ function recalculateAll(){
     r.statut=rentStatus(r);
   });
   rebuildCashMovements();
+  rebuildBankMovements();
   moduleRows('caisse').forEach(c=>{
     const day=String(c.date||'');
     const movements=moduleRows('mouvementsCaisse').filter(m=>m.caisseDate===day && m.type!=='Ouverture');
@@ -362,6 +367,8 @@ function recalculateAll(){
   });
 }
 function movementTime(date,hhmm){return (date||today())+'T'+hhmm}
+function isBankMode(mode){return /virement|cheque|banque/i.test(String(mode||''))}
+function bankName(mode, fallback='Banque'){return isBankMode(mode)?String(mode||fallback):fallback}
 function rebuildCashMovements(){
   const manual=moduleRows('mouvementsCaisse').filter(m=>m.source==='MANUEL').map(m=>({
     ...m,
@@ -403,6 +410,47 @@ function rebuildCashMovements(){
     m.soldeApres=balances[day];
   });
   state.db.mouvementsCaisse=all;
+}
+function rebuildBankMovements(){
+  const manual=moduleRows('mouvementsBanque').filter(m=>m.source==='MANUEL').map(m=>({
+    ...m,
+    entree:n(m.entree),
+    sortie:n(m.sortie),
+    source:'MANUEL',
+    banque:m.banque||'Banque',
+    statut:m.statut||'A rapprocher',
+    rapprochement:m.rapprochement||'A verifier'
+  }));
+  const generated=[];
+  const add=(row)=>generated.push({
+    id:row.id||friendlyId('mouvementsBanque'),
+    dateHeure:row.dateHeure,
+    banque:row.banque||'Banque',
+    type:row.type,
+    reference:row.reference||'',
+    source:row.source||'AUTO',
+    libelle:row.libelle||'',
+    entree:n(row.entree),
+    sortie:n(row.sortie),
+    soldeApres:0,
+    mode:row.mode||'',
+    responsable:row.responsable||'',
+    statut:row.statut||'A rapprocher',
+    rapprochement:row.rapprochement||'Non rapproche',
+    notes:row.notes||''
+  });
+  moduleRows('depots').filter(d=>d.date && d.statut!=='Prepare').forEach(d=>add({id:'BNQ-DPT-'+d.id,dateHeure:movementTime(d.date,'16:30'),banque:d.banque||'Banque',type:'Entree',reference:d.reference||d.id,source:'Depot',libelle:'Depot caisse vers banque',entree:d.montant,sortie:0,mode:'Depot banque',responsable:d.deposant,statut:d.statut,rapprochement:d.statut==='Confirme'?'Rapproche':'A verifier'}));
+  moduleRows('paiements').filter(p=>p.date && p.statut!=='Annule' && isBankMode(p.mode)).forEach(p=>add({id:'BNQ-PAY-'+p.id,dateHeure:movementTime(p.date,'10:30'),banque:bankName(p.mode),type:'Entree',reference:p.referencePaiement||p.reference||p.id,source:'Paiement',libelle:(p.source||'Paiement')+' bancaire - '+(p.payeur||p.boutiqueCode||''),entree:p.montant,sortie:0,mode:p.mode,responsable:p.collecteur,statut:p.statut==='Confirme'?'Confirme':'A rapprocher',rapprochement:p.statut==='Confirme'?'Rapproche':'A verifier'}));
+  moduleRows('revenus').filter(r=>r.date && r.statut!=='Annule' && isBankMode(r.mode)).forEach(r=>add({id:'BNQ-REV-'+r.id,dateHeure:movementTime(r.date,'11:30'),banque:bankName(r.mode),type:'Entree',reference:r.reference||r.id,source:'Revenu',libelle:(r.source||'Revenu')+' bancaire - '+(r.description||r.client||''),entree:r.montant,sortie:0,mode:r.mode,responsable:r.collecteur,statut:r.statut==='Confirme'?'Confirme':'A rapprocher',rapprochement:r.statut==='Confirme'?'Rapproche':'A verifier'}));
+  moduleRows('depenses').filter(d=>d.date && isBankMode(d.modePaiement)).forEach(d=>add({id:'BNQ-DEP-'+d.id,dateHeure:movementTime(d.date,'14:30'),banque:bankName(d.modePaiement),type:'Sortie',reference:d.id,source:'Depense',libelle:(d.categorie||'Depense')+' bancaire - '+(d.description||d.payeA||''),entree:0,sortie:d.montant,mode:d.modePaiement,responsable:d.autorisePar||d.collecteur,statut:'A rapprocher',rapprochement:'A verifier'}));
+  const all=[...generated,...manual].sort((a,b)=>String(a.dateHeure).localeCompare(String(b.dateHeure))||String(a.reference).localeCompare(String(b.reference)));
+  const balances={};
+  all.forEach(m=>{
+    const bank=m.banque||'Banque';
+    balances[bank]=(balances[bank]||0)+n(m.entree)-n(m.sortie);
+    m.soldeApres=balances[bank];
+  });
+  state.db.mouvementsBanque=all;
 }
 
 function renderNav(){
@@ -505,7 +553,7 @@ function renderModule(id){
   if(id==='caisse'){renderCash();return}
   const mod=MODULE_MAP[id], rows=moduleRows(id);
   const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
-  const visible=id==='mouvementsCaisse'?mod.fields.slice(0,10):mod.fields.slice(0,7);
+  const visible=(id==='mouvementsCaisse'||id==='mouvementsBanque')?mod.fields.slice(0,10):mod.fields.slice(0,7);
   const extraTools=id==='loyers'&&canEdit()?`<button class="btn primary" onclick="generateRents()">Generer loyers du mois</button>`:'';
   document.getElementById('modulePage').innerHTML=`
     <div class="grid stats">
@@ -583,8 +631,9 @@ function rowHtml(mod,row,fields){
   const receipt=mod.id==='paiements'?` <button class="btn sm primary" onclick="openReceipt('${row.id}')">Recu</button>`:'';
   const close=canEdit()&&mod.id==='caisse'&&row.statut!=='Cloture'?` <button class="btn sm primary" onclick="closeCash('${row.id}')">Cloturer</button>`:'';
   const journal=mod.id==='caisse'?` <button class="btn sm" onclick="openCashJournal('${esc(row.date||'')}')">Journal</button>`:'';
+  const bankJournal=mod.id==='depots'?` <button class="btn sm" onclick="openBankJournal('${esc(row.reference||row.banque||'')}')">Journal banque</button>`:'';
   const edit=canEdit()?` <button class="btn sm" onclick="openForm('${mod.id}','${row.id}')">Modifier</button> <button class="btn sm danger" onclick="deleteRow('${mod.id}','${row.id}')">Supprimer</button>`:' Lecture seule';
-  const actions=mod.id==='audit'?'':`${receipt}${close}${journal}${edit}`;
+  const actions=mod.id==='audit'?'':`${receipt}${close}${journal}${bankJournal}${edit}`;
   return `<tr>${fields.map(f=>`<td>${cell(row[f[0]],f)}</td>`).join('')}<td>${actions}</td></tr>`;
 }
 function openCashJournal(day){
@@ -594,6 +643,15 @@ function openCashJournal(day){
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===currentPage));
   document.getElementById('pageTitle').textContent='Mouvements caisse';
   document.getElementById('pageSub').textContent=day?'Journal chronologique du '+day:'Journal chronologique des mouvements de caisse';
+  render();
+}
+function openBankJournal(filter=''){
+  currentPage='modulePage';
+  currentModule='mouvementsBanque';
+  search=filter||'';
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===currentPage));
+  document.getElementById('pageTitle').textContent='Mouvements banque';
+  document.getElementById('pageSub').textContent=filter?'Journal bancaire filtre sur '+filter:'Journal chronologique des mouvements bancaires';
   render();
 }
 function cell(v,f){if(f[2]==='money')return money(v);if(f[2]==='select')return badge(v);if(f[2]==='url'&&v)return `<a href="${esc(v)}" target="_blank">Ouvrir</a>`;if(f[2]==='file')return v?`<a href="${esc(v)}" download>Telecharger</a>`:'';return esc(v||'')}
@@ -982,7 +1040,7 @@ document.getElementById('modalBack').addEventListener('click',e=>{if(e.target.id
 document.getElementById('unlockBtn').onclick=unlock;
 document.getElementById('resetAccessBtn').onclick=resetAccess;
 document.getElementById('lockPassword').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
-window.navigate=navigate;window.openForm=openForm;window.deleteRow=deleteRow;window.exportCsv=exportCsv;window.closeModal=closeModal;window.closeReceipt=closeReceipt;window.openReceipt=openReceipt;window.generateRents=generateRents;window.loadSheets=loadSheets;window.closeCash=closeCash;window.openCashJournal=openCashJournal;window.createReminder=createReminder;window.printMonthlySummary=printMonthlySummary;
+window.navigate=navigate;window.openForm=openForm;window.deleteRow=deleteRow;window.exportCsv=exportCsv;window.closeModal=closeModal;window.closeReceipt=closeReceipt;window.openReceipt=openReceipt;window.generateRents=generateRents;window.loadSheets=loadSheets;window.closeCash=closeCash;window.openCashJournal=openCashJournal;window.openBankJournal=openBankJournal;window.createReminder=createReminder;window.printMonthlySummary=printMonthlySummary;
 render();
 checkLock();
 </script>
