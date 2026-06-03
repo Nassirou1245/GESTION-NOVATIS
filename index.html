@@ -493,9 +493,9 @@ function renderDashboard(){
   const espaces=moduleRows('inventaire'), loyers=moduleRows('loyers'), sorties=moduleRows('depenses'), revenus=moduleRows('revenus'), caisse=moduleRows('caisse'), banque=moduleRows('mouvementsBanque'), cashMoves=moduleRows('mouvementsCaisse');
   const occupied=espaces.filter(b=>b.statut==='Occupe').length, totalSpaces=espaces.length, vacant=espaces.filter(b=>b.statut==='Vacant').length;
   const rentDue=sum(loyers,'montant'), rentPaid=sum(loyers,'paye'), expenses=sum(sorties,'montant'), other=sum(revenus,'montant');
-  const unpaid=sum(loyers,'solde'), net=rentPaid+other-expenses, cashReal=sum(caisse,'cashReel'), cashGap=sum(caisse,'ecart'), bankBalance=bank.reduce((a,m)=>a+n(m.entree)-n(m.sortie),0);
+  const unpaid=sum(loyers,'solde'), net=rentPaid+other-expenses, cashReal=sum(caisse,'cashReel'), cashGap=sum(caisse,'ecart'), bankBalance=banque.reduce((a,m)=>a+n(m.entree)-n(m.sortie),0);
   const lateRents=loyers.filter(r=>n(r.solde)>0).sort((a,b)=>n(b.solde)-n(a.solde));
-  const bankPending=bank.filter(m=>/a rapprocher|a verifier|ecart|prepare/i.test(String(m.statut)+' '+String(m.rapprochement)));
+  const bankPending=banque.filter(m=>/a rapprocher|a verifier|ecart|prepare/i.test(String(m.statut)+' '+String(m.rapprochement)));
   const cashProblems=caisse.filter(c=>n(c.ecart)!==0||c.statut==='Ecart a justifier');
   const month=monthNow(), monthData=monthlySummary(month);
   const cashIn=sum(cashMoves.filter(m=>m.type==='Entree'),'entree'), cashOut=sum(cashMoves.filter(m=>m.type==='Sortie'),'sortie');
