@@ -721,8 +721,8 @@ function printCashClosing(rowId){
       <tr><td class="r-blue r-section" colspan="4">Justification / observations</td></tr>
       <tr><td colspan="4">${esc(c.notes||'A completer si ecart ou anomalie.')}</td></tr>
       <tr><td class="r-blue r-section" colspan="4">Mouvements du jour</td></tr>
-      <tr><th>Heure</th><th>Libelle</th><th>Entree / Sortie</th><th>Solde apres</th></tr>
-      ${movements.map(m=>`<tr><td>${esc(String(m.dateHeure||'').slice(11,16))}</td><td>${esc(m.libelle||m.source||'')}</td><td>${m.type==='Sortie'?'- '+money(m.sortie):money(m.entree)}</td><td class="r-amount">${money(m.soldeApres)}</td></tr>`).join('')||'<tr><td colspan="4">Aucun mouvement trace.</td></tr>'}
+      <tr><th>Heure</th><th>Libelle</th><th>Entree</th><th>Sortie</th><th>Solde apres</th></tr>
+      ${movements.map(m=>`<tr><td>${esc(String(m.dateHeure||'').slice(11,16))}</td><td>${esc(m.libelle||m.source||'')}</td><td class="r-amount">${n(m.entree)?money(m.entree):''}</td><td class="r-amount">${n(m.sortie)?money(m.sortie):''}</td><td class="r-amount">${money(m.soldeApres)}</td></tr>`).join('')||'<tr><td colspan="5">Aucun mouvement trace.</td></tr>'}
       <tr><td class="r-sign" colspan="2">Signature caissier</td><td class="r-sign" colspan="2">Validation direction</td></tr>
     </table></div>`;
   document.getElementById('modalBack').classList.add('show');
