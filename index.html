@@ -662,9 +662,10 @@ function rowHtml(mod,row,fields){
   const receipt=mod.id==='paiements'?` <button class="btn sm primary" onclick="openReceipt('${row.id}')">Recu</button>`:'';
   const close=canEdit()&&mod.id==='caisse'&&row.statut!=='Cloture'?` <button class="btn sm primary" onclick="closeCash('${row.id}')">Cloturer</button>`:'';
   const journal=mod.id==='caisse'?` <button class="btn sm" onclick="openCashJournal('${esc(row.date||'')}')">Journal</button>`:'';
+  const situation=mod.id==='caisse'?` <button class="btn sm" onclick="printCashClosing('${row.id}')">Situation</button>`:'';
   const bankJournal=mod.id==='depots'?` <button class="btn sm" onclick="openBankJournal('${esc(row.reference||row.banque||'')}')">Journal banque</button>`:'';
   const edit=canEdit()?` <button class="btn sm" onclick="openForm('${mod.id}','${row.id}')">Modifier</button> <button class="btn sm danger" onclick="deleteRow('${mod.id}','${row.id}')">Supprimer</button>`:' Lecture seule';
-  const actions=mod.id==='audit'?'':`${receipt}${close}${journal}${bankJournal}${edit}`;
+  const actions=mod.id==='audit'?'':`${receipt}${close}${journal}${situation}${bankJournal}${edit}`;
   return `<tr>${fields.map(f=>`<td>${cell(row[f[0]],f)}</td>`).join('')}<td>${actions}</td></tr>`;
 }
 function openCashJournal(day){
@@ -701,6 +702,30 @@ function printCashJournal(day=''){
   const filter=day||search||'';
   const rows=moduleRows('mouvementsCaisse').filter(m=>!filter||String(m.caisseDate).includes(filter)||JSON.stringify(m).toLowerCase().includes(String(filter).toLowerCase()));
   printableRows('Journal caisse '+(filter||'complet'),rows,MODULE_MAP.mouvementsCaisse.fields.slice(0,10));
+}
+function printCashClosing(rowId){
+  const c=moduleRows('caisse').find(r=>r.id===rowId);
+  if(!c){toast('Journee caisse introuvable');return}
+  const movements=moduleRows('mouvementsCaisse').filter(m=>m.caisseDate===c.date);
+  const modal=document.getElementById('modal');
+  modal.className='modal receipt-modal';
+  modal.innerHTML=`<header><h3>Situation journaliere caisse - ${esc(c.date)}</h3><button class="btn sm" onclick="closeModal()">Fermer</button></header>
+    <div class="receipt-actions"><button class="btn primary" onclick="window.print()">Imprimer</button></div>
+    <div class="receipt"><table>
+      <tr><td class="r-blue r-title" colspan="4">SITUATION JOURNALIERE DE CAISSE</td></tr>
+      <tr><td class="r-label">Date</td><td>${esc(c.date)}</td><td class="r-label">Caissier</td><td>${esc(c.caissier)}</td></tr>
+      <tr><td>Solde ouverture</td><td class="r-amount">${money(c.soldeOuverture)}</td><td>Entrees</td><td class="r-amount">${money(c.entrees)}</td></tr>
+      <tr><td>Sorties</td><td class="r-amount">${money(c.sorties)}</td><td>Solde theorique</td><td class="r-amount">${money(c.soldeTheorique)}</td></tr>
+      <tr><td>Cash reel compte</td><td class="r-amount">${money(c.cashReel)}</td><td>Ecart</td><td class="r-amount">${money(c.ecart)}</td></tr>
+      <tr><td>Statut</td><td>${badge(c.statut)}</td><td>Cloture</td><td>${c.statut==='Cloture'?'Oui':'Non'}</td></tr>
+      <tr><td class="r-blue r-section" colspan="4">Justification / observations</td></tr>
+      <tr><td colspan="4">${esc(c.notes||'A completer si ecart ou anomalie.')}</td></tr>
+      <tr><td class="r-blue r-section" colspan="4">Mouvements du jour</td></tr>
+      <tr><th>Heure</th><th>Libelle</th><th>Entree / Sortie</th><th>Solde apres</th></tr>
+      ${movements.map(m=>`<tr><td>${esc(String(m.dateHeure||'').slice(11,16))}</td><td>${esc(m.libelle||m.source||'')}</td><td>${m.type==='Sortie'?'- '+money(m.sortie):money(m.entree)}</td><td class="r-amount">${money(m.soldeApres)}</td></tr>`).join('')||'<tr><td colspan="4">Aucun mouvement trace.</td></tr>'}
+      <tr><td class="r-sign" colspan="2">Signature caissier</td><td class="r-sign" colspan="2">Validation direction</td></tr>
+    </table></div>`;
+  document.getElementById('modalBack').classList.add('show');
 }
 function printBankJournal(filter=''){
   const q=filter||search||'';
@@ -1061,6 +1086,7 @@ function runBrowserSelfTest(){
   const checks=[
     ['Dashboard KPI',document.getElementById('dashboard').innerHTML.includes('Espaces totaux')&&document.getElementById('dashboard').innerHTML.includes('Solde banque')],
     ['Mouvements caisse',!!MODULE_MAP.mouvementsCaisse&&typeof printCashJournal==='function'],
+    ['Situation cloture caisse',typeof printCashClosing==='function'],
     ['Mouvements banque',!!MODULE_MAP.mouvementsBanque&&typeof printBankJournal==='function'],
     ['Lecture seule boss',typeof canEdit==='function'&&DEFAULT_VIEWER_PASS==='0000'&&DEFAULT_PASS==='1234'],
     ['Encodage propre',!new RegExp('[\\u00c3\\u00f0\\u00e2\\u00c2]').test(document.body.innerText)],
@@ -1114,7 +1140,7 @@ document.getElementById('modalBack').addEventListener('click',e=>{if(e.target.id
 document.getElementById('unlockBtn').onclick=unlock;
 document.getElementById('resetAccessBtn').onclick=resetAccess;
 document.getElementById('lockPassword').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
-window.navigate=navigate;window.openForm=openForm;window.deleteRow=deleteRow;window.exportCsv=exportCsv;window.closeModal=closeModal;window.closeReceipt=closeReceipt;window.openReceipt=openReceipt;window.generateRents=generateRents;window.loadSheets=loadSheets;window.closeCash=closeCash;window.openCashJournal=openCashJournal;window.openBankJournal=openBankJournal;window.printCashJournal=printCashJournal;window.printBankJournal=printBankJournal;window.runBrowserSelfTest=runBrowserSelfTest;window.createReminder=createReminder;window.printMonthlySummary=printMonthlySummary;
+window.navigate=navigate;window.openForm=openForm;window.deleteRow=deleteRow;window.exportCsv=exportCsv;window.closeModal=closeModal;window.closeReceipt=closeReceipt;window.openReceipt=openReceipt;window.generateRents=generateRents;window.loadSheets=loadSheets;window.closeCash=closeCash;window.openCashJournal=openCashJournal;window.openBankJournal=openBankJournal;window.printCashJournal=printCashJournal;window.printCashClosing=printCashClosing;window.printBankJournal=printBankJournal;window.runBrowserSelfTest=runBrowserSelfTest;window.createReminder=createReminder;window.printMonthlySummary=printMonthlySummary;
 render();
 checkLock();
 </script>
