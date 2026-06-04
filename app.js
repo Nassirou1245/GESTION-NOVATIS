@@ -588,11 +588,13 @@ function render(){
 /* ─── INIT & EVENTS ─── */
 function initClient(){
   const cfg = config();
-  el('supabaseUrl').value = cfg.url||'';
-  el('supabaseAnon').value = cfg.anon||'';
-  if(cfg.url&&cfg.anon&&window.supabase){
+  // Populate fields if they exist
+  const urlEl = el('supabaseUrl'), anonEl = el('supabaseAnon');
+  if(urlEl) urlEl.value = cfg.url||'';
+  if(anonEl) anonEl.value = cfg.anon||'';
+  
+  if(cfg.url && cfg.anon && window.supabase){
     try{
-      // Support both legacy anon key (eyJ...) and new publishable key (sb_publishable_...)
       const url = cfg.url.trim();
       const key = cfg.anon.trim();
       client = window.supabase.createClient(url, key, {
@@ -601,8 +603,12 @@ function initClient(){
       setSyncState('ok','Supabase connecté');
     } catch(e){
       setSyncState('err','Erreur: '+e.message);
+      client = null;
     }
-  } else setSyncState('warn','Mode local');
+  } else {
+    client = null;
+    setSyncState('warn','Mode local — configurez Supabase');
+  }
 }
 
 function setSyncState(cls,text){
@@ -649,6 +655,5 @@ window.openCaisseJournal=openCaisseJournal;window.openCaisseForm=openCaisseForm;
 window.closeCaisseSafe=closeCaisseSafe;window.saveJustification=saveJustification;
 window.openReceipt=openReceipt;window.loadAll=loadAll;
 
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 initClient();
 loadAll();
