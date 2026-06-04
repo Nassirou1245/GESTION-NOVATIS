@@ -2,12 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#102418">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Madina ERP">
 <title>Madina — NOVATIS ERP</title>
-<link rel="manifest" href="manifest.webmanifest">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
@@ -97,41 +96,27 @@ tr:hover td{background:#fbfdfb}
   header{position:relative}.page,.panel{padding:14px}
 }
 
-
-/* ── LOCK SCREEN ── */
-#lockScreen{
-  position:fixed;inset:0;
-  background:linear-gradient(135deg,#071a0e 0%,#102418 60%,#0a1f10 100%);
-  display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;
-}
+#lockScreen{position:fixed;inset:0;background:linear-gradient(135deg,#071a0e,#102418,#0a1f10);
+  display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
 .lk-wrap{width:min(400px,100%);text-align:center}
-.lk-logo{width:72px;height:72px;border-radius:18px;
-  background:linear-gradient(135deg,#2f8b61,#1a5c38);
-  display:grid;place-items:center;font-size:32px;font-weight:900;color:#fff;
-  margin:0 auto 18px;box-shadow:0 8px 32px rgba(47,139,97,.4)}
+.lk-logo{width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,#2f8b61,#1a5c38);
+  display:grid;place-items:center;font-size:32px;font-weight:900;color:#fff;margin:0 auto 18px}
 .lk-title{font-size:24px;font-weight:800;color:#fff;margin-bottom:4px}
 .lk-sub{font-size:13px;color:#6b8c73;margin-bottom:28px}
-.lk-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
-  border-radius:14px;padding:26px}
-.lk-tabs{display:flex;gap:6px;margin-bottom:20px;background:rgba(0,0,0,.25);
-  border-radius:10px;padding:4px}
+.lk-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:26px}
+.lk-tabs{display:flex;gap:6px;margin-bottom:20px;background:rgba(0,0,0,.25);border-radius:10px;padding:4px}
 .lk-tab{flex:1;padding:9px;border-radius:7px;border:none;background:transparent;
-  color:#6b8c73;font-size:13px;font-weight:700;cursor:pointer;
-  transition:all .2s;font-family:inherit}
-.lk-tab.active{background:#1f6b4a;color:#fff;box-shadow:0 2px 8px rgba(31,107,74,.4)}
-.lk-label{display:block;text-align:left;font-size:11px;font-weight:700;
-  color:#6b8c73;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+  color:#6b8c73;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.lk-tab.active{background:#1f6b4a;color:#fff}
+.lk-label{display:block;text-align:left;font-size:11px;font-weight:700;color:#6b8c73;
+  margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
 .lk-input{width:100%;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);
   border-radius:10px;padding:14px 16px;font-size:22px;color:#fff;text-align:center;
-  letter-spacing:.4em;font-family:inherit;outline:none;
-  transition:border-color .2s;margin-bottom:8px}
+  letter-spacing:.4em;font-family:inherit;outline:none;margin-bottom:8px}
 .lk-input:focus{border-color:#2f8b61}
 .lk-error{color:#ef4444;font-size:12px;min-height:18px;margin-bottom:12px;text-align:left}
 .lk-btn{width:100%;background:linear-gradient(135deg,#2f8b61,#1a5c38);border:none;
-  color:#fff;border-radius:10px;padding:14px;font-size:15px;font-weight:700;
-  cursor:pointer;font-family:inherit}
-.lk-btn:hover{opacity:.9}
-.lk-footer{margin-top:18px;font-size:11px;color:#3d5a45}
+  color:#fff;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
 .role-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
   border-radius:99px;font-size:11px;font-weight:700;margin:8px 10px 0}
 .role-badge.admin{background:rgba(31,107,74,.3);color:#6ee7b7}
@@ -140,7 +125,6 @@ tr:hover td{background:#fbfdfb}
 </head>
 <body>
 
-<!-- LOCK SCREEN -->
 <div id="lockScreen">
   <div class="lk-wrap">
     <div class="lk-logo">M</div>
@@ -148,32 +132,28 @@ tr:hover td{background:#fbfdfb}
     <div class="lk-sub">NOVATIS GLOBAL SARLU — Accès sécurisé</div>
     <div class="lk-card">
       <div class="lk-tabs">
-        <button class="lk-tab active" id="tabAdmin" onclick="setLockRole('admin')">👑 Administrateur</button>
-        <button class="lk-tab" id="tabBoss" onclick="setLockRole('boss')">👁 Direction</button>
+        <button class="lk-tab active" id="tabAdmin">👑 Administrateur</button>
+        <button class="lk-tab" id="tabBoss">👁 Direction</button>
       </div>
       <label class="lk-label">Mot de passe</label>
       <input class="lk-input" id="lockInput" type="password" maxlength="8" placeholder="••••">
       <div class="lk-error" id="lockError"></div>
-      <button class="lk-btn" onclick="tryUnlock()">Déverrouiller</button>
+      <button class="lk-btn" id="unlockBtn">Déverrouiller</button>
     </div>
-    <div class="lk-footer">NOVATIS ERP · Conakry, République de Guinée</div>
+    <div style="margin-top:18px;font-size:11px;color:#3d5a45">NOVATIS ERP · Conakry</div>
   </div>
 </div>
 
-<!-- APP -->
 <aside id="appAside" style="display:none">
   <div class="brand">
     <div class="mark">M</div>
-    <div>
-      <h1>Centre Commercial Madina</h1>
-      <p>NOVATIS GLOBAL</p>
-    </div>
+    <div><h1>Centre Commercial Madina</h1><p>NOVATIS GLOBAL</p></div>
   </div>
   <div id="roleBadgeWrap"></div>
   <nav id="nav"></nav>
   <div class="sync" id="syncState">
     <span class="dot" id="syncDot"></span>
-    <span id="syncText">Initialisation…</span>
+    <span id="syncText">Connexion…</span>
   </div>
 </aside>
 
@@ -184,92 +164,107 @@ tr:hover td{background:#fbfdfb}
       <small id="pageSub">Pilotage web app</small>
     </div>
     <div class="hActions">
-      <button id="lockBtn" onclick="lockApp()">🔒 Verrouiller</button>
+      <button id="lockBtn">🔒 Verrouiller</button>
     </div>
   </header>
-
   <section id="setup" class="panel" style="display:none">
-    <h3 style="margin:0 0 6px">Connexion Supabase</h3>
-    <p style="margin:0 0 12px;font-size:13px">Configuration du projet Supabase.</p>
+    <h3 style="margin:0 0 6px">Configuration Supabase</h3>
     <div class="form">
-      <input id="supabaseUrl" placeholder="https://votre-projet.supabase.co" style="min-width:280px">
-      <input id="supabaseAnon" placeholder="anon public key" style="min-width:280px">
+      <input id="supabaseUrl" placeholder="URL Supabase" style="min-width:260px">
+      <input id="supabaseAnon" placeholder="Clé publique" style="min-width:260px">
       <button id="saveConfigBtn" class="primary">Enregistrer</button>
       <button id="testConfigBtn">Tester</button>
       <label class="fileBtn" style="cursor:pointer;font-weight:700;font-size:13px">
-        📂 Importer JSON
-        <input id="importJson" type="file" accept="application/json,.json" hidden>
+        📂 Importer JSON<input id="importJson" type="file" accept=".json" hidden>
       </label>
     </div>
   </section>
-
   <section id="dashboard" class="page active"></section>
   <section id="tablePage" class="page"></section>
 </main>
 
-<div class="modalBack" id="modalBack">
-  <div class="modal" id="modal"></div>
-</div>
+<div class="modalBack" id="modalBack"><div class="modal" id="modal"></div></div>
 
 <script>
-// ── LOCK SCREEN LOGIC ──
+// ══ SUPABASE CREDENTIALS (pré-configurées) ══
+const SUPABASE_URL = 'https://jqwqlpwudmwqrbkfifta.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_wuzaLDaPfc1R-UoKrUWPNA_j3nutt5Q';
+
+// ══ LOCK SCREEN ══
 const PASS_ADMIN = '1234';
 const PASS_BOSS  = '0000';
 let lockRole = 'admin';
 let appRole  = null;
 
-function setLockRole(r){
-  lockRole = r;
-  document.getElementById('tabAdmin').classList.toggle('active', r==='admin');
-  document.getElementById('tabBoss').classList.toggle('active',  r==='boss');
-  document.getElementById('lockInput').value = '';
-  document.getElementById('lockError').textContent = '';
-  document.getElementById('lockInput').focus();
-}
-
-function tryUnlock(){
-  const pass = document.getElementById('lockInput').value;
-  const ok = (lockRole==='admin' && pass===PASS_ADMIN) ||
-             (lockRole==='boss'  && pass===PASS_BOSS);
-  if(ok){
-    appRole = lockRole;
-    document.getElementById('lockScreen').style.display = 'none';
-    document.getElementById('appAside').style.display = '';
-    document.getElementById('appMain').style.display = '';
-    // Show config only for admin
-    if(appRole==='admin'){
-      document.getElementById('setup').style.display = '';
-    }
-    // Show role badge in sidebar
-    document.getElementById('roleBadgeWrap').innerHTML = appRole==='admin'
-      ? '<div class="role-badge admin">👑 Administrateur</div>'
-      : '<div class="role-badge boss">👁 Direction — Lecture seule</div>';
-    // Start app
-    initClient();
-    loadAll();
-  } else {
-    document.getElementById('lockError').textContent = '❌ Mot de passe incorrect';
-    document.getElementById('lockInput').value = '';
-    document.getElementById('lockInput').focus();
-  }
-}
-
-function lockApp(){
-  appRole = null;
-  document.getElementById('lockScreen').style.display = 'flex';
-  document.getElementById('appAside').style.display = 'none';
-  document.getElementById('appMain').style.display = 'none';
-  document.getElementById('lockInput').value = '';
-  document.getElementById('lockError').textContent = '';
-  setLockRole('admin');
-}
-
-function isAdmin(){ return appRole === 'admin'; }
-
+document.getElementById('tabAdmin').onclick = () => {
+  lockRole='admin';
+  document.getElementById('tabAdmin').classList.add('active');
+  document.getElementById('tabBoss').classList.remove('active');
+  document.getElementById('lockInput').value='';
+  document.getElementById('lockError').textContent='';
+};
+document.getElementById('tabBoss').onclick = () => {
+  lockRole='boss';
+  document.getElementById('tabBoss').classList.add('active');
+  document.getElementById('tabAdmin').classList.remove('active');
+  document.getElementById('lockInput').value='';
+  document.getElementById('lockError').textContent='';
+};
+document.getElementById('unlockBtn').onclick = tryUnlock;
 document.getElementById('lockInput').addEventListener('keydown', e=>{
   if(e.key==='Enter') tryUnlock();
 });
-setTimeout(()=>document.getElementById('lockInput').focus(), 100);
+
+function tryUnlock(){
+  const pass = document.getElementById('lockInput').value;
+  const ok = (lockRole==='admin'&&pass===PASS_ADMIN)||(lockRole==='boss'&&pass===PASS_BOSS);
+  if(ok){
+    appRole = lockRole;
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('appAside').style.display='';
+    document.getElementById('appMain').style.display='';
+    if(appRole==='admin') document.getElementById('setup').style.display='';
+    document.getElementById('roleBadgeWrap').innerHTML = appRole==='admin'
+      ? '<div class="role-badge admin">👑 Administrateur</div>'
+      : '<div class="role-badge boss">👁 Direction — Lecture seule</div>';
+    startApp();
+  } else {
+    document.getElementById('lockError').textContent='❌ Mot de passe incorrect';
+    document.getElementById('lockInput').value='';
+  }
+}
+
+function startApp(){
+  // Créer client Supabase avec clés intégrées
+  try{
+    const saved = JSON.parse(localStorage.getItem('madina_pwa_config')||'{}');
+    const su = saved.url||SUPABASE_URL;
+    const sk = saved.anon||SUPABASE_KEY;
+    window.__supabaseClient = window.supabase.createClient(su, sk, {auth:{persistSession:false}});
+    // Pre-fill config fields
+    const uEl=document.getElementById('supabaseUrl');
+    const kEl=document.getElementById('supabaseAnon');
+    if(uEl) uEl.value=su;
+    if(kEl) kEl.value=sk;
+  }catch(e){ console.error('Supabase init error:', e); }
+  initClient();
+  loadAll();
+}
+
+document.getElementById('lockBtn').onclick = ()=>{
+  appRole=null;
+  document.getElementById('lockScreen').style.display='flex';
+  document.getElementById('appAside').style.display='none';
+  document.getElementById('appMain').style.display='none';
+  document.getElementById('setup').style.display='none';
+  document.getElementById('lockInput').value='';
+  document.getElementById('lockError').textContent='';
+  lockRole='admin';
+  document.getElementById('tabAdmin').classList.add('active');
+  document.getElementById('tabBoss').classList.remove('active');
+};
+
+function isAdmin(){ return appRole==='admin'; }
 </script>
 
 <script>
@@ -279,9 +274,6 @@ setTimeout(()=>document.getElementById('lockInput').focus(), 100);
    ============================================================ */
 
 const CONFIG_KEY = 'madina_pwa_config';
-// Clés Supabase pré-configurées (fonctionnent sur tous les appareils)
-const SUPABASE_URL_DEFAULT = 'https://jqwqlpwudmwqrbkfifta.supabase.co';
-const SUPABASE_KEY_DEFAULT = 'sb_publishable_wuzaLDaPfc1R-UoKrUWPNA_j3nutt5Q';
 const TABLES = [
   ['inventaire','Espaces','Espaces & locataires',
     ['codeespace','typeespace','zone','loyermensuel','nomlocataireofficiel','occupanteel','telephone','activite','statut','notes']],
@@ -367,17 +359,7 @@ const money = v => n(v).toLocaleString('fr-FR')+' GNF';
 const esc = v => String(v??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 const today = () => new Date().toISOString().slice(0,10);
 const tableMeta = id => TABLES.find(t=>t[0]===id);
-const config = () => {
-  try{
-    const saved = JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}');
-    return {
-      url: saved.url || SUPABASE_URL_DEFAULT,
-      anon: saved.anon || SUPABASE_KEY_DEFAULT
-    };
-  }catch{
-    return { url: SUPABASE_URL_DEFAULT, anon: SUPABASE_KEY_DEFAULT };
-  }
-};
+const config = () => { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}')}catch{return {}} };
 const lbl = f => LABELS[f] || f;
 const norm = v => String(v||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const isOccupied = r => ['occupe','occupee','occupé','occupée'].includes(norm(r.statut));
@@ -875,89 +857,75 @@ function render(){
 
 /* ─── INIT & EVENTS ─── */
 function initClient(){
-  const cfg = config();
-  // Auto-save defaults if nothing stored yet
-  if(!localStorage.getItem(CONFIG_KEY)){
-    localStorage.setItem(CONFIG_KEY, JSON.stringify({url: SUPABASE_URL_DEFAULT, anon: SUPABASE_KEY_DEFAULT}));
+  // Use pre-created client from startApp() if available
+  if(window.__supabaseClient){
+    client = window.__supabaseClient;
+    setSyncState('ok','Supabase connecté');
+    return;
   }
-  // Populate fields if they exist
-  const urlEl = el('supabaseUrl'), anonEl = el('supabaseAnon');
-  if(urlEl) urlEl.value = cfg.url||'';
-  if(anonEl) anonEl.value = cfg.anon||'';
-  
-  if(cfg.url && cfg.anon && window.supabase){
+  // Fallback: create from config
+  const saved = {};
+  try{ Object.assign(saved, JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}')); }catch{}
+  const _u = saved.url  || (typeof SUPABASE_URL!=='undefined'?SUPABASE_URL:'');
+  const _k = saved.anon || (typeof SUPABASE_KEY!=='undefined'?SUPABASE_KEY:'');
+  if(_u && _k && window.supabase){
     try{
-      const url = cfg.url.trim();
-      const key = cfg.anon.trim();
-      client = window.supabase.createClient(url, key, {
-        auth: { persistSession: true, autoRefreshToken: true }
-      });
+      client = window.supabase.createClient(_u, _k, {auth:{persistSession:false}});
+      window.__supabaseClient = client;
       setSyncState('ok','Supabase connecté');
     } catch(e){
       setSyncState('err','Erreur: '+e.message);
       client = null;
     }
   } else {
+    setSyncState('warn','Non connecté');
     client = null;
-    setSyncState('warn','Mode local — configurez Supabase');
   }
 }
 
 function setSyncState(cls,text){
-  el('syncDot').className='dot '+cls;
-  el('syncText').textContent=text;
+  const dot=el('syncDot'), txt=el('syncText');
+  if(dot) dot.className='dot '+cls;
+  if(txt) txt.textContent=text;
 }
 
-if(el('saveConfigBtn')) el('saveConfigBtn').onclick = async()=>{
-  localStorage.setItem(CONFIG_KEY,JSON.stringify({url:el('supabaseUrl').value.trim(),anon:el('supabaseAnon').value.trim()}));
-  initClient(); await loadAll();
-};
-if(el('testConfigBtn')) el('testConfigBtn').onclick = async()=>{
-  initClient();
-  if(!client){showToast('Configuration manquante','err');return}
-  try{
-    const {data,error}=await client.from('inventaire').select('id').limit(1);
-    if(error){
-      showToast('Erreur: '+error.message,'err');
-      console.error('Supabase error:', error);
-    } else {
-      showToast('Connexion Supabase OK ✅');
-      await loadAll();
-    }
-  } catch(e){
-    showToast('Erreur connexion: '+e.message,'err');
-    console.error('Connection error:', e);
-  }
-};
-// loginBtn/logoutBtn removed — using lock screen instead
-if(el('modalBack')) el('modalBack').onclick = e=>{if(e.target.id==='modalBack')closeModal()};
-if(el('importJson')) el('importJson').onchange = e=>{if(e.target.files[0])importLegacyJson(e.target.files[0])};
-
+/* Event listeners and init handled by main HTML */
 window.navigate=navigate;window.openForm=openForm;window.closeModal=closeModal;
 window.openCaisseJournal=openCaisseJournal;window.openCaisseForm=openCaisseForm;
 window.closeCaisseSafe=closeCaisseSafe;window.saveJustification=saveJustification;
 window.openReceipt=openReceipt;window.loadAll=loadAll;
 
-// initClient and loadAll called after login
-
 </script>
 
 <script>
-// Override openForm to block boss
-const _origOpenForm = window.openForm;
-window.openForm = function(table, id=''){
-  if(!isAdmin()){
-    showToast('Accès refusé — mode lecture seule Direction','err');
-    return;
-  }
-  _origOpenForm(table, id);
+// ══ EVENT LISTENERS (après chargement app.js) ══
+document.getElementById('saveConfigBtn').onclick = async()=>{
+  const u=document.getElementById('supabaseUrl').value.trim();
+  const k=document.getElementById('supabaseAnon').value.trim();
+  localStorage.setItem('madina_pwa_config',JSON.stringify({url:u,anon:k}));
+  window.__supabaseClient = window.supabase.createClient(u,k,{auth:{persistSession:false}});
+  initClient(); await loadAll();
+  showToast('Configuration enregistrée');
+};
+document.getElementById('testConfigBtn').onclick = async()=>{
+  if(!client){showToast('Non connecté','err');return}
+  const {error}=await client.from('inventaire').select('id').limit(1);
+  if(error) showToast('Erreur: '+error.message,'err');
+  else{showToast('Connexion OK ✅');await loadAll();}
+};
+document.getElementById('modalBack').onclick = e=>{
+  if(e.target.id==='modalBack') closeModal();
+};
+document.getElementById('importJson').onchange = e=>{
+  if(e.target.files[0]) importLegacyJson(e.target.files[0]);
 };
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
-  });
-}
+// ══ BLOQUER MODIFICATIONS POUR DIRECTION ══
+const _origOpenForm = window.openForm;
+window.openForm = function(table,id=''){
+  if(!isAdmin()){showToast('Accès refusé — Direction lecture seule','err');return;}
+  _origOpenForm(table,id);
+};
 </script>
 </body>
 </html>
