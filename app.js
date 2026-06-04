@@ -1,0 +1,654 @@
+/* ============================================================
+   NOVATIS — Centre Commercial Madina
+   PWA Supabase — Version exploitation complète
+   ============================================================ */
+
+const CONFIG_KEY = 'madina_pwa_config';
+const TABLES = [
+  ['inventaire','Espaces','Espaces & locataires',
+    ['codeespace','typeespace','zone','loyermensuel','nomlocataireofficiel','occupanteel','telephone','activite','statut','notes']],
+  ['locataires','Locataires','Espaces & locataires',
+    ['nom','commerce','telephone','activite','risque','statut','notes']],
+  ['contrats','Contrats','Espaces & locataires',
+    ['numero','boutiquecode','locataire','datedebut','datefin','montantloyer','caution','statut','notes']],
+  ['loyers','Loyers','Finances',
+    ['mois','boutiquecode','locataire','montant','paye','solde','statut','datepaiement','reference','notes']],
+  ['paiements','Paiements & reçus','Finances',
+    ['date','reference','payeur','boutiquecode','source','loyer','arrieres','penalites','montant','mode','collecteur','statut','notes']],
+  ['depenses','Dépenses','Finances',
+    ['date','categorie','description','montant','modepaiement','payea','autorisépar','statut','notes']],
+  ['caisse','Caisse','Finances',
+    ['date','caissier','soldeouverture','entrees','sorties','soldetheorique','cashreel','ecart','justificationecart','statut','notes']],
+  ['mouvements_caisse','Mouvements caisse','Finances',
+    ['dateheure','caissedate','type','libelle','reference','entree','sortie','soldeapres','source','responsable','statut']],
+  ['depots','Dépôts bancaires','Finances',
+    ['date','reference','banque','montant','deposant','statut','notes']],
+  ['mouvements_banque','Mouvements banque','Finances',
+    ['dateheure','banque','type','reference','libelle','entree','sortie','soldeapres','statut']],
+  ['revenus','Autres revenus','Revenus annexes',
+    ['date','source','description','client','zone','montant','mode','reference','collecteur','statut','notes']],
+  ['archives','Archives','Administration',
+    ['titre','type','reference','date','statut','notes']],
+  ['audit','Journal audit','Administration',
+    ['date','action','module','utilisateur','details']]
+];
+
+const MONEY_FIELDS = new Set([
+  'montant','paye','solde','loyermensuel','montantloyer','caution',
+  'soldeouverture','entrees','sorties','soldetheorique','cashreel','ecart',
+  'entree','sortie','soldeapres','loyer','arrieres','penalites'
+]);
+
+const LEGACY_MAP = { mouvementsCaisse:'mouvements_caisse', mouvementsBanque:'mouvements_banque' };
+const FIELD_MAP = {
+  codeEspace:'codeespace', typeEspace:'typeespace', loyerMensuel:'loyermensuel',
+  nomLocataireOfficiel:'nomlocataireofficiel', boutiqueCode:'boutiquecode',
+  montantLoyer:'montantloyer', modePaiement:'modepaiement',
+  soldeOuverture:'soldeouverture', soldeTheorique:'soldetheorique',
+  cashReel:'cashreel', dateHeure:'dateheure', caisseDate:'caissedate',
+  soldeApres:'soldeapres', justificationEcart:'justificationecart',
+  payeA:'payea', autorisePar:'autorisépar'
+};
+const LABELS = {
+  codeespace:'Code espace', typeespace:'Type', zone:'Zone', loyermensuel:'Loyer mensuel GNF',
+  nomlocataireofficiel:'Locataire officiel', occupanteel:'Occupant réel', statut:'Statut',
+  boutiquecode:'Code boutique', montantloyer:'Loyer GNF', caution:'Caution GNF',
+  soldeouverture:'Solde ouverture', soldetheorique:'Sol. théorique', cashreel:'Cash réel',
+  dateheure:'Date heure', caissedate:'Jour caisse', soldeapres:'Solde après',
+  justificationecart:'Justification écart', payea:'Payé à', autorisépar:'Autorisé par',
+  montant:'Montant GNF', paye:'Payé GNF', solde:'Solde GNF',
+  entree:'Entrée GNF', sortie:'Sortie GNF', ecart:'Écart GNF',
+  entrees:'Entrées GNF', sorties:'Sorties GNF',
+  date:'Date', mois:'Mois', reference:'Référence', statut:'Statut',
+  caissier:'Caissier', banque:'Banque', deposant:'Déposant',
+  libelle:'Libellé', type:'Type', source:'Source', mode:'Mode',
+  payeur:'Payeur', collecteur:'Collecteur', responsable:'Responsable',
+  nom:'Nom', commerce:'Commerce', telephone:'Téléphone', activite:'Activité', risque:'Risque',
+  numero:'Numéro', locataire:'Locataire', datedebut:'Début', datefin:'Fin',
+  categorie:'Catégorie', description:'Description', modepaiement:'Mode paiement',
+  client:'Client', titre:'Titre', action:'Action', module:'Module',
+  utilisateur:'Utilisateur', details:'Détails', notes:'Notes',
+  loyer:'Loyer GNF', arrieres:'Arrières GNF', penalites:'Pénalités GNF'
+};
+
+const TYPE_COLORS = {
+  Ouverture:{bg:'#dbeafe',color:'#1e40af'},
+  Entree:{bg:'#dff3e9',color:'#1f6b4a'},
+  Sortie:{bg:'#fee4df',color:'#b42318'},
+  Ajustement:{bg:'#ede9fe',color:'#6d28d9'}
+};
+
+let client = null;
+let current = 'dashboard';
+let rows = {};
+let searchVal = '';
+
+const el = id => document.getElementById(id);
+const n = v => Number(v||0)||0;
+const money = v => n(v).toLocaleString('fr-FR')+' GNF';
+const esc = v => String(v??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const today = () => new Date().toISOString().slice(0,10);
+const tableMeta = id => TABLES.find(t=>t[0]===id);
+const config = () => { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}')}catch{return {}} };
+const lbl = f => LABELS[f] || f;
+const norm = v => String(v||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const isOccupied = r => ['occupe','occupee','occupé','occupée'].includes(norm(r.statut));
+const isVacant = r => ['vacant','libre','disponible'].includes(norm(r.statut));
+
+function badge(v){
+  const s = String(v||'');
+  if(/pay[eé]|confirm[eé]|actif|conforme|complet|occup[eé]|trait[eé]|valid[eé]/i.test(s)) return `<span class="badge ok">${esc(s)}</span>`;
+  if(/impay[eé]|retard|[eé]cart|annul[eé]|vacant|critique|urgent/i.test(s)) return `<span class="badge err">${esc(s)}</span>`;
+  if(/pr[eé]par[eé]|partiel|v[eé]rifier|rapprocher|ouvert/i.test(s)) return `<span class="badge warn">${esc(s)}</span>`;
+  if(/clotur[eé]/i.test(s)) return `<span class="badge blue">${esc(s)}</span>`;
+  return `<span class="badge">${esc(s)}</span>`;
+}
+
+function cashTotal(caisse, moves){
+  const declared = caisse.reduce((a,r)=>a+n(r.cashreel),0);
+  if(declared) return declared;
+  const latestByDay = {};
+  moves.forEach(m => {
+    const d = m.caissedate || String(m.dateheure||'').slice(0,10);
+    if(!d) return;
+    if(!latestByDay[d] || String(m.dateheure||'') >= String(latestByDay[d].dateheure||'')) latestByDay[d] = m;
+  });
+  return Object.values(latestByDay).reduce((a,m)=>a+n(m.soldeapres),0);
+}
+
+
+/* ─── NAVIGATION ─── */
+function renderNav(){
+  const groups = {};
+  TABLES.forEach(t => (groups[t[2]] ||= []).push(t));
+  const counts = {};
+  TABLES.forEach(t => counts[t[0]] = (rows[t[0]]||[]).length);
+  el('nav').innerHTML =
+    `<button class="navBtn ${current==='dashboard'?'active':''}" onclick="navigate('dashboard')">Tableau de bord</button>` +
+    Object.entries(groups).map(([g,items]) =>
+      `<div class="navGroup">${esc(g)}</div>` +
+      items.map(t => `<button class="navBtn ${current===t[0]?'active':''}" onclick="navigate('${t[0]}')">${esc(t[1])}<span class="navBadge">${counts[t[0]]||0}</span></button>`).join('')
+    ).join('');
+}
+
+async function loadAll(){
+  if(!client){ setSyncState('warn','Mode local'); renderDashboard(); renderNav(); return; }
+  setSyncState('warn','Chargement…');
+  for(const [id] of TABLES){
+    const {data,error} = await client.from(id).select('*').order('id',{ascending:false}).limit(2000);
+    rows[id] = error ? [] : (data||[]);
+  }
+  setSyncState('ok','Supabase synchronisé');
+  render();
+}
+
+function navigate(id){
+  current = id; searchVal = '';
+  el('dashboard').classList.toggle('active', id==='dashboard');
+  el('tablePage').classList.toggle('active', id!=='dashboard');
+  render();
+}
+
+/* ─── DASHBOARD ─── */
+function stat(label,value,note){ return `<div class="card stat"><span>${esc(label)}</span><strong>${esc(String(value))}</strong><small>${esc(note||'')}</small></div>`; }
+
+function bars(items){
+  const max = Math.max(1,...items.map(i=>i.value));
+  return items.map(i=>`<div class="barRow"><b>${esc(i.label)}</b><div class="track"><div class="fill" style="width:${Math.min(100,Math.round(i.value/max*100))}%"></div></div><span>${i.suffix?Math.round(i.value)+i.suffix:money(i.value)}</span></div>`).join('');
+}
+
+function renderDashboard(){
+  const inv = rows.inventaire||[], loyers = rows.loyers||[], revenus = rows.revenus||[];
+  const depenses = rows.depenses||[], caisse = rows.caisse||[], cashMoves = rows.mouvements_caisse||[];
+  const banque = rows.mouvements_banque||[];
+  const occupied = inv.filter(isOccupied).length;
+  const vacant = inv.filter(isVacant).length;
+  const rentPaid = loyers.reduce((a,r)=>a+n(r.paye),0);
+  const rentDue = loyers.reduce((a,r)=>a+n(r.montant),0);
+  const rentUnpaid = loyers.reduce((a,r)=>a+n(r.solde),0);
+  const other = revenus.filter(r=>r.statut!=='Annule').reduce((a,r)=>a+n(r.montant),0);
+  const out = depenses.reduce((a,r)=>a+n(r.montant),0);
+  const cash = cashTotal(caisse, cashMoves);
+  const bank = banque.reduce((a,r)=>a+n(r.entree)-n(r.sortie),0);
+  const recouvrement = rentDue ? Math.round(rentPaid/rentDue*100) : 0;
+
+  el('pageTitle').textContent = 'Tableau de bord';
+  el('pageSub').textContent = 'Pilotage web app — Centre Commercial Madina';
+  el('dashboard').innerHTML = `
+    <div class="grid stats">
+      ${stat('Espaces totaux', inv.length, 'Inventaire')}
+      ${stat('Espaces occupés', occupied, 'Loués')}
+      ${stat('Espaces vacants', vacant, 'Potentiel')}
+      ${stat('Taux occupation', (inv.length?Math.round(occupied/inv.length*100):0)+'%', 'Centre commercial')}
+    </div>
+    <div class="grid stats">
+      ${stat('Revenus loyers', money(rentPaid), 'Encaissements')}
+      ${stat('Autres recettes', money(other), 'Annexes')}
+      ${stat('Total dépenses', money(out), 'Sorties')}
+      ${stat('Solde net', money(rentPaid+other-out), 'Résultat')}
+    </div>
+    <div class="grid stats">
+      ${stat('Cash caisse', money(cash), 'Cash déclaré')}
+      ${stat('Solde banque', money(bank), 'Mouvements banque')}
+      ${stat('Impayés loyers', money(rentUnpaid), 'À recouvrer')}
+      ${stat('Taux recouvrement', recouvrement+'%', 'Paiements/Appels')}
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
+      <div class="card"><div class="sectionHead"><h3>Répartition financière</h3></div><div class="barList">${bars([
+        {label:'Loyers encaissés',value:rentPaid},{label:'Revenus annexes',value:other},
+        {label:'Dépenses',value:out},{label:'Impayés',value:rentUnpaid}
+      ])}</div></div>
+      <div class="card"><div class="sectionHead"><h3>Indicateurs</h3></div><div class="barList">${bars([
+        {label:'Occupation',value:inv.length?occupied/inv.length*100:0,suffix:'%'},
+        {label:'Recouvrement',value:recouvrement,suffix:'%'},
+        {label:'Espaces vacants',value:inv.length?vacant/inv.length*100:0,suffix:'%'}
+      ])}</div></div>
+    </div>`;
+}
+
+/* ─── MODULE CAISSE (vue spéciale) ─── */
+function renderCaisse(){
+  const data = rows.caisse||[];
+  const filtered = data.filter(r=>JSON.stringify(r).toLowerCase().includes(searchVal.toLowerCase()));
+  const totalE = data.reduce((a,r)=>a+n(r.entrees),0);
+  const totalS = data.reduce((a,r)=>a+n(r.sorties),0);
+  const totalEc = data.reduce((a,r)=>a+n(r.ecart),0);
+  el('pageTitle').textContent = 'Caisse';
+  el('pageSub').textContent = 'Contrôle journalier — ouverture · entrées · sorties · écart · clôture';
+  el('tablePage').innerHTML = `
+    <div class="grid stats">
+      ${stat('Journées caisse',data.length,'Sessions suivies')}
+      ${stat('Total entrées',money(totalE),'Paiements + revenus')}
+      ${stat('Total sorties',money(totalS),'Dépenses + dépôts')}
+      ${stat('Écart cumulé',money(totalEc),totalEc===0?'Conforme':totalEc<0?'Déficit à couvrir':'Surplus')}
+    </div>
+    <div class="card">
+      <div class="sectionHead">
+        <div><h3>Contrôle de caisse</h3><p>Ouverture · Entrées · Sorties · Solde théorique · Cash réel · Écart</p></div>
+        <div class="tools">
+          <input class="search" id="caisseSearch" placeholder="Rechercher…" value="${esc(searchVal)}">
+          <button onclick="navigate('mouvements_caisse')">Tous mouvements</button>
+          ${client?`<button class="primary" onclick="openCaisseForm()">+ Nouvelle journée</button>`:''}
+        </div>
+      </div>
+      <div class="tableWrap"><table><thead><tr>
+        <th>Date</th><th>Caissier</th><th>Ouverture</th><th>Entrées</th><th>Sorties</th><th>Sol. théorique</th><th>Cash réel</th><th>Écart</th><th>Statut</th><th>Actions</th>
+      </tr></thead><tbody>
+      ${filtered.map(c=>{
+        const ev = n(c.ecart);
+        const ecBadge = ev===0?`<span class="badge ok">0 GNF</span>`:ev<0?`<span class="badge err">${money(ev)}</span>`:`<span class="badge warn">+${money(ev)}</span>`;
+        const justifWarn = ev!==0&&!(c.justificationecart||'').trim()?`<span title="Justification manquante" style="color:#b42318;margin-left:4px">⚠</span>`:'';
+        return `<tr>
+          <td><b>${esc(c.date)}</b></td>
+          <td>${esc(c.caissier)}</td>
+          <td style="font-weight:700">${money(c.soldeouverture)}</td>
+          <td style="color:#1f6b4a;font-weight:700">${money(c.entrees)}</td>
+          <td style="color:#b42318;font-weight:700">${money(c.sorties)}</td>
+          <td style="font-weight:700">${money(c.soldetheorique)}</td>
+          <td>${money(c.cashreel)}</td>
+          <td>${ecBadge}${justifWarn}</td>
+          <td>${badge(c.statut)}</td>
+          <td style="white-space:nowrap">
+            <button class="sm" onclick="openCaisseJournal('${esc(c.date)}','${esc(c.id)}')">Journal</button>
+            ${c.statut!=='Cloture'&&client?`<button class="sm primary" onclick="closeCaisseSafe('${esc(c.id)}')">Clôturer</button>`:''}
+            ${client?`<button class="sm" onclick="openForm('caisse','${esc(c.id)}')">Modifier</button>`:''}
+          </td>
+        </tr>`;
+      }).join('')||`<tr><td colspan="10" class="empty">Aucune journée de caisse.</td></tr>`}
+      </tbody></table></div>
+    </div>`;
+  el('caisseSearch').addEventListener('input', e=>{ searchVal=e.target.value; renderCaisse(); });
+}
+
+/* ─── JOURNAL CAISSE MODAL ─── */
+function openCaisseJournal(day, caisseId){
+  const c = (rows.caisse||[]).find(r=>r.id===caisseId || r.date===day);
+  if(!c){showToast('Caisse introuvable','err');return}
+  const mvts = (rows.mouvements_caisse||[]).filter(m=>(m.caissedate||String(m.dateheure||'').slice(0,10))===String(c.date)).sort((a,b)=>String(a.dateheure).localeCompare(String(b.dateheure)));
+  const ev = n(c.ecart);
+  const ecartColor = ev===0?'#1f6b4a':ev<0?'#b42318':'#b7791f';
+  const ecartBg = ev===0?'#dff3e9':ev<0?'#fee4df':'#fff4d7';
+  const ecartBorder = ev===0?'#b8e2ce':ev<0?'#f4b8b1':'#fcd34d';
+  const ecartLabel = ev===0?'✅ CONFORME':ev<0?'⚠ DÉFICIT':'⚠ SURPLUS';
+
+  el('modal').innerHTML = `
+    <header>
+      <h3>Journal de caisse — ${esc(c.date)} | ${esc(c.caissier)}</h3>
+      <button onclick="closeModal()">Fermer</button>
+    </header>
+    <div class="formBody">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f9fbfa;border-radius:8px;padding:14px;margin-bottom:16px;border:1px solid var(--line)">
+        <div style="display:flex;gap:16px;align-items:center;flex:1;flex-wrap:wrap">
+          ${kpi('Ouverture',money(c.soldeouverture),'#17211b')}
+          <span style="font-size:22px;color:#adc0b5">+</span>
+          ${kpi('Entrées',money(c.entrees),'#1f6b4a')}
+          <span style="font-size:22px;color:#adc0b5">−</span>
+          ${kpi('Sorties',money(c.sorties),'#b42318')}
+          <span style="font-size:22px;color:#adc0b5">=</span>
+          ${kpi('Sol. théorique',money(c.soldetheorique),'#17211b')}
+        </div>
+        <div style="text-align:center;background:${ecartBg};border-radius:8px;padding:10px 16px;border:1px solid ${ecartBorder};min-width:148px">
+          <div style="font-size:11px;color:${ecartColor};font-weight:900;letter-spacing:.04em">${ecartLabel}</div>
+          <div style="font-size:20px;font-weight:900;color:${ecartColor}">${ev>=0?'+':''}${money(ev)}</div>
+          <div style="font-size:11px;color:${ecartColor}">Cash réel: ${money(c.cashreel)}</div>
+        </div>
+      </div>
+
+      <div class="tableWrap">
+        <table>
+          <thead><tr>
+            <th>Heure</th><th>Type</th><th>Libellé</th><th>Référence</th>
+            <th style="text-align:right">Entrée</th><th style="text-align:right">Sortie</th><th style="text-align:right">Solde courant</th>
+          </tr></thead>
+          <tbody>
+          ${mvts.length===0?`<tr><td colspan="7" class="empty">Aucun mouvement pour ce jour.</td></tr>`:mvts.map(m=>{
+            const tc = TYPE_COLORS[m.type] || {bg:'#f4f7f5',color:'#60716a'};
+            const hh = String(m.dateheure||'').slice(11,16)||'--:--';
+            return `<tr>
+              <td style="color:#60716a;font-size:12px">${esc(hh)}</td>
+              <td><span style="background:${tc.bg};color:${tc.color};border-radius:99px;padding:3px 9px;font-size:11px;font-weight:800">${esc(m.type)}</span></td>
+              <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(m.libelle)}">${esc(m.libelle||'')}</td>
+              <td style="font-size:11px;color:#60716a">${esc(m.reference||'')}</td>
+              <td style="text-align:right;font-weight:${n(m.entree)>0?'700':'400'};color:${n(m.entree)>0?'#1f6b4a':'#adc0b5'}">${n(m.entree)>0?money(m.entree):'—'}</td>
+              <td style="text-align:right;font-weight:${n(m.sortie)>0?'700':'400'};color:${n(m.sortie)>0?'#b42318':'#adc0b5'}">${n(m.sortie)>0?money(m.sortie):'—'}</td>
+              <td style="text-align:right;font-weight:700">${money(m.soldeapres)}</td>
+            </tr>`;
+          }).join('')}
+          <tr style="background:#102418;color:#fff">
+            <td colspan="4" style="padding:11px 12px;font-weight:900">SOLDE THÉORIQUE FINAL</td>
+            <td style="text-align:right;font-weight:900;color:#6ee7b7;padding:11px 12px">${money(c.entrees)}</td>
+            <td style="text-align:right;font-weight:900;color:#fca5a5;padding:11px 12px">${money(c.sorties)}</td>
+            <td style="text-align:right;font-weight:900;padding:11px 12px">${money(c.soldetheorique)}</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      ${ev!==0?`
+      <div style="margin-top:14px;background:${ecartBg};border:1px solid ${ecartBorder};border-radius:8px;padding:14px 16px">
+        <div style="font-weight:900;color:${ecartColor};margin-bottom:8px">Écart de ${money(Math.abs(ev))} — Justification ${(c.justificationecart||'').trim()?'enregistrée':'requise avant clôture'}</div>
+        ${(c.justificationecart||'').trim()?`<div style="font-size:13px;background:#fff;padding:10px 12px;border-radius:6px;border:1px solid ${ecartBorder}">📋 ${esc(c.justificationecart)}</div>`:''}
+        ${client?`<div style="display:flex;gap:8px;margin-top:10px">
+          <input id="justifInput" type="text" value="${esc(c.justificationecart||'')}" placeholder="Ex: Remise en banque non encore saisie…" style="flex:1;border:1px solid ${ecartBorder};border-radius:8px;padding:8px 10px;font-size:13px">
+          <button class="primary" onclick="saveJustification('${esc(c.id)}')">Enregistrer</button>
+        </div>`:''}
+      </div>`
+      :`<div style="margin-top:14px;background:#dff3e9;border:1px solid #b8e2ce;border-radius:8px;padding:12px 16px;color:#1f6b4a;font-weight:700">✅ Caisse conforme — aucun écart.</div>`}
+
+      <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="closeModal()">Fermer</button>
+        ${c.statut!=='Cloture'&&client?`<button class="primary" onclick="closeCaisseSafe('${esc(c.id)}',true)">Clôturer cette journée</button>`:''}
+      </div>
+    </div>`;
+  el('modalBack').classList.add('show');
+}
+
+function kpi(label,value,color){
+  return `<div style="text-align:center"><div style="font-size:11px;color:#60716a;font-weight:700;text-transform:uppercase;letter-spacing:.04em">${label}</div><div style="font-size:16px;font-weight:900;color:${color}">${value}</div></div>`;
+}
+
+async function saveJustification(caisseId){
+  if(!client) return;
+  const val = (el('justifInput')?.value||'').trim();
+  if(!val){showToast('Saisissez une justification','err');return}
+  const {error} = await client.from('caisse').update({justificationecart:val}).eq('id',caisseId);
+  if(error){showToast(error.message,'err');return}
+  showToast('Justification enregistrée');
+  await loadAll();
+  const c = (rows.caisse||[]).find(r=>r.id===caisseId);
+  if(c) openCaisseJournal(c.date, caisseId);
+}
+
+async function closeCaisseSafe(caisseId, fromModal=false){
+  if(!client) return;
+  const c = (rows.caisse||[]).find(r=>r.id===caisseId);
+  if(!c){showToast('Caisse introuvable','err');return}
+  if(n(c.ecart)!==0 && !(c.justificationecart||'').trim()){
+    showToast('Écart détecté — justifiez avant de clôturer','err');
+    openCaisseJournal(c.date, caisseId);
+    return;
+  }
+  const {error} = await client.from('caisse').update({statut:'Cloture'}).eq('id',caisseId);
+  if(error){showToast(error.message,'err');return}
+  await auditLog('Clôture caisse','caisse','Caisse du '+c.date+' — écart '+money(c.ecart));
+  showToast('Caisse clôturée');
+  if(fromModal) closeModal();
+  await loadAll();
+}
+
+async function openCaisseForm(){
+  el('modal').innerHTML = `
+    <header><h3>Nouvelle journée de caisse</h3><button onclick="closeModal()">Fermer</button></header>
+    <form id="caisseForm" class="formBody">
+      <div class="formGrid">
+        <div class="field"><label>Date</label><input name="date" type="date" value="${today()}"></div>
+        <div class="field"><label>Caissier</label><input name="caissier" placeholder="Nom du caissier"></div>
+        <div class="field"><label>Solde ouverture GNF</label><input name="soldeouverture" type="number" value="0"></div>
+        <div class="field"><label>Cash réel compté GNF</label><input name="cashreel" type="number" value="0"></div>
+        <div class="field full"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
+      </div>
+      <footer><button type="button" onclick="closeModal()">Annuler</button><button class="primary">Enregistrer</button></footer>
+    </form>`;
+  el('modalBack').classList.add('show');
+  el('caisseForm').onsubmit = async e => {
+    e.preventDefault();
+    const f = e.target.elements;
+    const payload = {
+      date: f.date.value, caissier: f.caissier.value,
+      soldeouverture: n(f.soldeouverture.value),
+      cashreel: n(f.cashreel.value),
+      entrees:0, sorties:0,
+      soldetheorique: n(f.soldeouverture.value),
+      ecart: n(f.cashreel.value) - n(f.soldeouverture.value),
+      statut: n(f.cashreel.value)===n(f.soldeouverture.value)?'Conforme':'Ecart a justifier',
+      justificationecart: '', notes: f.notes.value
+    };
+    const {error} = await client.from('caisse').insert(payload);
+    if(error){showToast(error.message,'err');return}
+    showToast('Journée créée');
+    closeModal(); await loadAll();
+  };
+}
+
+/* ─── REÇU DE PAIEMENT ─── */
+function openReceipt(id){
+  const p = (rows.paiements||[]).find(r=>r.id===id);
+  if(!p){showToast('Paiement introuvable','err');return}
+  const total = n(p.loyer)+n(p.arrieres)+n(p.penalites);
+  const reste = Math.max(0, total - n(p.montant));
+  el('modal').className='modal';
+  el('modal').innerHTML = `
+    <header><h3>Reçu — ${esc(p.reference||p.id)}</h3><button onclick="closeModal()">Fermer</button></header>
+    <div style="padding:10px 16px;display:flex;gap:8px"><button onclick="window.print()">🖨 Imprimer</button></div>
+    <div class="receipt">
+      <table>
+        <tr>
+          <td class="r-logo" rowspan="2">NOVATIS<br><span style="font-size:16px">GLOBAL</span></td>
+          <td class="r-title" colspan="3">REÇU DE PAIEMENT</td>
+        </tr>
+        <tr><td colspan="2">N° : <b>${esc(p.reference||'REC-000')}</b></td><td>Loyer : <b>${esc(p.mois||p.periode||'')}</b></td></tr>
+        <tr><td colspan="2"><b>NOVATIS GLOBAL SARLU</b><br>Centre Commercial EX ENIPRA Madina</td>
+            <td><b>Locataire :</b> ${esc(p.payeur)}</td><td><b>Code :</b> ${esc(p.boutiquecode||p.boutiqueCode||'')}</td></tr>
+        <tr><td class="r-section" colspan="4">DÉTAIL DU PAIEMENT</td></tr>
+        <tr><td colspan="3">Loyer</td><td class="r-amount">${money(p.loyer)}</td></tr>
+        ${n(p.arrieres)?`<tr><td colspan="3" style="background:#fff4d7">Arrières</td><td class="r-amount" style="background:#fff4d7">${money(p.arrieres)}</td></tr>`:'' }
+        ${n(p.penalites)?`<tr><td colspan="3">Pénalités</td><td class="r-amount">${money(p.penalites)}</td></tr>`:'' }
+        <tr class="r-total"><td colspan="3">TOTAL</td><td class="r-amount">${money(total||n(p.montant))}</td></tr>
+        <tr class="r-total"><td colspan="3">Montant payé</td><td class="r-amount">${money(p.montant)}</td></tr>
+        <tr class="r-total"><td colspan="3">RESTE À PAYER</td><td class="r-amount">${money(reste)}</td></tr>
+        <tr><td colspan="4">Mode de paiement : <b>${esc(p.mode||'Espèces')}</b> &nbsp; Ref : ${esc(p.reference||'')} &nbsp; Fait à Conakry, le ${new Date(p.date||today()).toLocaleDateString('fr-FR')}</td></tr>
+        <tr class="r-sign"><td colspan="2">LOCATAIRE</td><td colspan="2">LA DIRECTION GÉNÉRALE</td></tr>
+      </table>
+      <div class="r-footer">Siège : Lambanyi, Conakry — Rép. de Guinée · Tel : +224 628 91 54 27 · novatisglobalsarlu@gmail.com</div>
+    </div>`;
+  el('modalBack').classList.add('show');
+}
+
+/* ─── TABLE GÉNÉRIQUE ─── */
+function renderTable(){
+  const meta = tableMeta(current);
+  if(!meta) return;
+  if(current==='caisse'){renderCaisse();return}
+
+  const data = rows[current]||[];
+  const filtered = data.filter(r=>JSON.stringify(r).toLowerCase().includes(searchVal.toLowerCase()));
+  const fields = meta[3].slice(0,8);
+  el('pageTitle').textContent = meta[1];
+  el('pageSub').textContent = meta[0]+' · '+data.length+' enregistrements · Supabase';
+  el('tablePage').innerHTML = `
+    <div class="card">
+      <div class="sectionHead">
+        <div><h3>${esc(meta[1])}</h3><p>${filtered.length} ligne(s)</p></div>
+        <div class="tools">
+          <input class="search" id="tableSearch" placeholder="Rechercher…" value="${esc(searchVal)}">
+          <button onclick="loadAll()">↺ Actualiser</button>
+          ${client?`<button class="primary" onclick="openForm('${meta[0]}')">+ Ajouter</button>`:''}
+        </div>
+      </div>
+      <div class="tableWrap"><table><thead><tr>
+        ${fields.map(f=>`<th>${esc(lbl(f))}</th>`).join('')}<th>Actions</th>
+      </tr></thead><tbody>
+      ${filtered.map(r=>`<tr>
+        ${fields.map(f=>`<td>${MONEY_FIELDS.has(f)?money(r[f]):badge(String(r[f]||''))}</td>`).join('')}
+        <td style="white-space:nowrap">
+          ${current==='paiements'?`<button class="sm" onclick="openReceipt('${esc(r.id)}')">Reçu</button> `:''}
+          ${current==='mouvements_caisse'?`<button class="sm" onclick="openCaisseJournal('${esc(r.caissedate||'')}','')">Voir caisse</button> `:''}
+          ${client?`<button class="sm" onclick="openForm('${meta[0]}','${esc(r.id)}')">Modifier</button>`:'Lecture seule'}
+        </td>
+      </tr>`).join('')||`<tr><td colspan="${fields.length+1}" class="empty">Aucune donnée.</td></tr>`}
+      </tbody></table></div>
+    </div>`;
+  el('tableSearch').addEventListener('input', e=>{ searchVal=e.target.value; renderTable(); });
+}
+
+/* ─── FORMULAIRE GÉNÉRIQUE ─── */
+function openForm(table, id=''){
+  if(!client){showToast('Configurez Supabase d\'abord','err');return}
+  const meta = tableMeta(table);
+  const record = (rows[table]||[]).find(r=>r.id===id)||{};
+  const fields = meta[3].filter(f=>f!=='id');
+  const isDate = f => f==='date'||f==='datepaiement'||f==='datedebut'||f==='datefin';
+  const isMemo = f => f==='notes'||f==='details'||f==='description'||f==='justificationecart';
+  el('modal').innerHTML = `
+    <header><h3>${id?'Modifier':'Ajouter'} — ${esc(meta[1])}</h3><button onclick="closeModal()">Fermer</button></header>
+    <form id="editForm"><div class="formGrid" style="padding:18px">
+    ${fields.map(f=>{
+      const full = isMemo(f)||f==='libelle'||f==='adresse';
+      if(isMemo(f)) return `<div class="field full"><label>${esc(lbl(f))}</label><textarea name="${esc(f)}" rows="2">${esc(record[f]??'')}</textarea></div>`;
+      const typ = isDate(f)?'date': f==='mois'?'month': MONEY_FIELDS.has(f)?'number':'text';
+      return `<div class="field ${full?'full':''}"><label>${esc(lbl(f))}</label><input name="${esc(f)}" type="${typ}" value="${esc(record[f]??'')}"></div>`;
+    }).join('')}
+    </div>
+    <footer><button type="button" onclick="closeModal()">Annuler</button><button class="primary">Enregistrer</button></footer></form>`;
+  el('modalBack').classList.add('show');
+  el('editForm').onsubmit = async e => {
+    e.preventDefault();
+    const payload = {};
+    fields.forEach(f => {
+      const el2 = e.target.elements[f];
+      payload[f] = MONEY_FIELDS.has(f) ? n(el2.value) : el2.value;
+    });
+    const result = id
+      ? await client.from(table).update(payload).eq('id',id)
+      : await client.from(table).insert(payload);
+    if(result.error){
+      showToast('Erreur: '+result.error.message,'err');
+      console.error('Save error:', result.error);
+      return;
+    }
+    await auditLog(id?'Modification':'Création', table, meta[1]+' '+( payload.reference||payload.date||id||''));
+    showToast('Enregistré');
+    closeModal(); await loadAll();
+  };
+}
+
+function closeModal(){ el('modalBack').classList.remove('show'); }
+
+/* ─── AUDIT ─── */
+async function auditLog(action, module, details){
+  if(!client) return;
+  await client.from('audit').insert({date:new Date().toISOString().slice(0,16),action,module,utilisateur:'Admin',details});
+}
+
+/* ─── TOAST ─── */
+function showToast(msg, type='ok'){
+  let t = el('toast');
+  if(!t){ t=document.createElement('div'); t.id='toast'; t.style.cssText='position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:8px;font-weight:700;font-size:13px;z-index:999;transition:opacity .3s'; document.body.appendChild(t); }
+  t.style.background = type==='err'?'#b42318':'#1f6b4a';
+  t.style.color = '#fff'; t.style.opacity='1';
+  t.textContent = msg;
+  clearTimeout(t._t); t._t = setTimeout(()=>t.style.opacity='0',3000);
+}
+
+/* ─── IMPORT JSON LEGACY ─── */
+function cleanPayload(table, row){
+  const meta = tableMeta(table); if(!meta) return null;
+  const allowed = new Set(['id',...meta[3]]);
+  const out = {};
+  Object.entries(row||{}).forEach(([k,v])=>{
+    const key = FIELD_MAP[k] || k.toLowerCase();
+    if(key==='id' && !/^[0-9a-f]{8}-[0-9a-f]{4}/.test(String(v||''))) return;
+    if(allowed.has(key)) out[key] = MONEY_FIELDS.has(key)?n(v):v;
+  });
+  if(table==='caisse'){
+    out.soldetheorique = n(out.soldetheorique)||n(out.soldeouverture)+n(out.entrees)-n(out.sorties);
+    out.ecart = n(out.ecart)||n(out.cashreel)-n(out.soldetheorique);
+  }
+  return out;
+}
+
+async function importLegacyJson(file){
+  if(!client){showToast('Connectez Supabase d\'abord','err');return}
+  const text = await file.text();
+  let parsed; try{parsed=JSON.parse(text)}catch{showToast('JSON invalide','err');return}
+  const db = parsed.db || parsed.state?.db || parsed;
+  if(!db||typeof db!=='object'){showToast('Format non reconnu','err');return}
+  let total=0;
+  for(const [legacyName,legacyRows] of Object.entries(db)){
+    const table = LEGACY_MAP[legacyName]||legacyName;
+    if(!tableMeta(table)||!Array.isArray(legacyRows)||!legacyRows.length) continue;
+    const payload = legacyRows.map(r=>cleanPayload(table,r)).filter(Boolean);
+    if(!payload.length) continue;
+    const {error} = await client.from(table).upsert(payload,{onConflict:'id'});
+    if(error){showToast('Erreur '+table+': '+error.message,'err');return}
+    total += payload.length;
+  }
+  showToast('Import terminé : '+total+' lignes');
+  await loadAll();
+}
+
+/* ─── RENDER PRINCIPAL ─── */
+function render(){
+  renderNav();
+  if(current==='dashboard') renderDashboard();
+  else if(current==='caisse') renderCaisse();
+  else renderTable();
+}
+
+/* ─── INIT & EVENTS ─── */
+function initClient(){
+  const cfg = config();
+  el('supabaseUrl').value = cfg.url||'';
+  el('supabaseAnon').value = cfg.anon||'';
+  if(cfg.url&&cfg.anon&&window.supabase){
+    try{
+      // Support both legacy anon key (eyJ...) and new publishable key (sb_publishable_...)
+      const url = cfg.url.trim();
+      const key = cfg.anon.trim();
+      client = window.supabase.createClient(url, key, {
+        auth: { persistSession: true, autoRefreshToken: true }
+      });
+      setSyncState('ok','Supabase connecté');
+    } catch(e){
+      setSyncState('err','Erreur: '+e.message);
+    }
+  } else setSyncState('warn','Mode local');
+}
+
+function setSyncState(cls,text){
+  el('syncDot').className='dot '+cls;
+  el('syncText').textContent=text;
+}
+
+el('saveConfigBtn').onclick = async()=>{
+  localStorage.setItem(CONFIG_KEY,JSON.stringify({url:el('supabaseUrl').value.trim(),anon:el('supabaseAnon').value.trim()}));
+  initClient(); await loadAll();
+};
+el('testConfigBtn').onclick = async()=>{
+  initClient();
+  if(!client){showToast('Configuration manquante','err');return}
+  try{
+    const {data,error}=await client.from('inventaire').select('id').limit(1);
+    if(error){
+      showToast('Erreur: '+error.message,'err');
+      console.error('Supabase error:', error);
+    } else {
+      showToast('Connexion Supabase OK ✅');
+      await loadAll();
+    }
+  } catch(e){
+    showToast('Erreur connexion: '+e.message,'err');
+    console.error('Connection error:', e);
+  }
+};
+el('loginBtn').onclick = async()=>{
+  initClient();
+  const email=prompt('Email');
+  const password=prompt('Mot de passe');
+  if(!email||!password)return;
+  const {error}=await client.auth.signInWithPassword({email,password});
+  if(error) showToast(error.message,'err');
+  else{el('loginBtn').classList.add('hidden');el('logoutBtn').classList.remove('hidden');await loadAll();}
+};
+el('logoutBtn').onclick = async()=>{if(client)await client.auth.signOut();location.reload()};
+el('modalBack').onclick = e=>{if(e.target.id==='modalBack')closeModal()};
+el('importJson').onchange = e=>{if(e.target.files[0])importLegacyJson(e.target.files[0])};
+
+window.navigate=navigate;window.openForm=openForm;window.closeModal=closeModal;
+window.openCaisseJournal=openCaisseJournal;window.openCaisseForm=openCaisseForm;
+window.closeCaisseSafe=closeCaisseSafe;window.saveJustification=saveJustification;
+window.openReceipt=openReceipt;window.loadAll=loadAll;
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+initClient();
+loadAll();

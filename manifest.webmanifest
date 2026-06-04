@@ -1,0 +1,19 @@
+{
+  "name": "Centre Commercial Madina - NOVATIS",
+  "short_name": "Madina ERP",
+  "description": "Gestion Centre Commercial Madina · NOVATIS GLOBAL SARLU",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#102418",
+  "theme_color": "#102418",
+  "orientation": "any",
+  "icons": [{
+    "src": "icon.svg",
+    "sizes": "any",
+    "type": "image/svg+xml",
+    "purpose": "any maskable"
+  }],
+  "shortcuts": [
+    { "name": "Tableau de bord", "url": "./index.html" }
+  ]
+}
