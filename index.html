@@ -279,6 +279,9 @@ setTimeout(()=>document.getElementById('lockInput').focus(), 100);
    ============================================================ */
 
 const CONFIG_KEY = 'madina_pwa_config';
+// Clés Supabase pré-configurées (fonctionnent sur tous les appareils)
+const SUPABASE_URL_DEFAULT = 'https://jqwqlpwudmwqrbkfifta.supabase.co';
+const SUPABASE_KEY_DEFAULT = 'sb_publishable_wuzaLDaPfc1R-UoKrUWPNA_j3nutt5Q';
 const TABLES = [
   ['inventaire','Espaces','Espaces & locataires',
     ['codeespace','typeespace','zone','loyermensuel','nomlocataireofficiel','occupanteel','telephone','activite','statut','notes']],
@@ -364,7 +367,17 @@ const money = v => n(v).toLocaleString('fr-FR')+' GNF';
 const esc = v => String(v??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 const today = () => new Date().toISOString().slice(0,10);
 const tableMeta = id => TABLES.find(t=>t[0]===id);
-const config = () => { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}')}catch{return {}} };
+const config = () => {
+  try{
+    const saved = JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}');
+    return {
+      url: saved.url || SUPABASE_URL_DEFAULT,
+      anon: saved.anon || SUPABASE_KEY_DEFAULT
+    };
+  }catch{
+    return { url: SUPABASE_URL_DEFAULT, anon: SUPABASE_KEY_DEFAULT };
+  }
+};
 const lbl = f => LABELS[f] || f;
 const norm = v => String(v||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const isOccupied = r => ['occupe','occupee','occupé','occupée'].includes(norm(r.statut));
@@ -863,6 +876,10 @@ function render(){
 /* ─── INIT & EVENTS ─── */
 function initClient(){
   const cfg = config();
+  // Auto-save defaults if nothing stored yet
+  if(!localStorage.getItem(CONFIG_KEY)){
+    localStorage.setItem(CONFIG_KEY, JSON.stringify({url: SUPABASE_URL_DEFAULT, anon: SUPABASE_KEY_DEFAULT}));
+  }
   // Populate fields if they exist
   const urlEl = el('supabaseUrl'), anonEl = el('supabaseAnon');
   if(urlEl) urlEl.value = cfg.url||'';
@@ -891,11 +908,11 @@ function setSyncState(cls,text){
   el('syncText').textContent=text;
 }
 
-el('saveConfigBtn').onclick = async()=>{
+if(el('saveConfigBtn')) el('saveConfigBtn').onclick = async()=>{
   localStorage.setItem(CONFIG_KEY,JSON.stringify({url:el('supabaseUrl').value.trim(),anon:el('supabaseAnon').value.trim()}));
   initClient(); await loadAll();
 };
-el('testConfigBtn').onclick = async()=>{
+if(el('testConfigBtn')) el('testConfigBtn').onclick = async()=>{
   initClient();
   if(!client){showToast('Configuration manquante','err');return}
   try{
@@ -912,18 +929,9 @@ el('testConfigBtn').onclick = async()=>{
     console.error('Connection error:', e);
   }
 };
-el('loginBtn').onclick = async()=>{
-  initClient();
-  const email=prompt('Email');
-  const password=prompt('Mot de passe');
-  if(!email||!password)return;
-  const {error}=await client.auth.signInWithPassword({email,password});
-  if(error) showToast(error.message,'err');
-  else{el('loginBtn').classList.add('hidden');el('logoutBtn').classList.remove('hidden');await loadAll();}
-};
-el('logoutBtn').onclick = async()=>{if(client)await client.auth.signOut();location.reload()};
-el('modalBack').onclick = e=>{if(e.target.id==='modalBack')closeModal()};
-el('importJson').onchange = e=>{if(e.target.files[0])importLegacyJson(e.target.files[0])};
+// loginBtn/logoutBtn removed — using lock screen instead
+if(el('modalBack')) el('modalBack').onclick = e=>{if(e.target.id==='modalBack')closeModal()};
+if(el('importJson')) el('importJson').onchange = e=>{if(e.target.files[0])importLegacyJson(e.target.files[0])};
 
 window.navigate=navigate;window.openForm=openForm;window.closeModal=closeModal;
 window.openCaisseJournal=openCaisseJournal;window.openCaisseForm=openCaisseForm;
