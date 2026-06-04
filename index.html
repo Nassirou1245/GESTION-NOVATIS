@@ -498,7 +498,7 @@ function renderCaisse(){
         <div class="tools">
           <input class="search" id="caisseSearch" placeholder="Rechercher…" value="${esc(searchVal)}">
           <button onclick="navigate('mouvements_caisse')">Tous mouvements</button>
-          ${client?`<button class="primary" onclick="openCaisseForm()">+ Nouvelle journée</button>`:''}
+          ${client&&isAdmin()?`<button class="primary" onclick="openCaisseForm()">+ Nouvelle journée</button>`:''}
         </div>
       </div>
       <div class="tableWrap"><table><thead><tr>
@@ -520,8 +520,8 @@ function renderCaisse(){
           <td>${badge(c.statut)}</td>
           <td style="white-space:nowrap">
             <button class="sm" onclick="openCaisseJournal('${esc(c.date)}','${esc(c.id)}')">Journal</button>
-            ${c.statut!=='Cloture'&&client?`<button class="sm primary" onclick="closeCaisseSafe('${esc(c.id)}')">Clôturer</button>`:''}
-            ${client?`<button class="sm" onclick="openForm('caisse','${esc(c.id)}')">Modifier</button>`:''}
+            ${c.statut!=='Cloture'&&client&&isAdmin()?`<button class="sm primary" onclick="closeCaisseSafe('${esc(c.id)}')">Clôturer</button>`:''}
+            ${client&&isAdmin()?`<button class="sm" onclick="openForm('caisse','${esc(c.id)}')">Modifier</button>`:''}
           </td>
         </tr>`;
       }).join('')||`<tr><td colspan="10" class="empty">Aucune journée de caisse.</td></tr>`}
@@ -732,7 +732,7 @@ function renderTable(){
         <div class="tools">
           <input class="search" id="tableSearch" placeholder="Rechercher…" value="${esc(searchVal)}">
           <button onclick="loadAll()">↺ Actualiser</button>
-          ${client?`<button class="primary" onclick="openForm('${meta[0]}')">+ Ajouter</button>`:''}
+          ${client&&isAdmin()?`<button class="primary" onclick="openForm('${meta[0]}')">+ Ajouter</button>`:''}
         </div>
       </div>
       <div class="tableWrap"><table><thead><tr>
@@ -743,7 +743,7 @@ function renderTable(){
         <td style="white-space:nowrap">
           ${current==='paiements'?`<button class="sm" onclick="openReceipt('${esc(r.id)}')">Reçu</button> `:''}
           ${current==='mouvements_caisse'?`<button class="sm" onclick="openCaisseJournal('${esc(r.caissedate||'')}','')">Voir caisse</button> `:''}
-          ${client?`<button class="sm" onclick="openForm('${meta[0]}','${esc(r.id)}')">Modifier</button>`:'Lecture seule'}
+          ${client&&isAdmin()?`<button class="sm" onclick="openForm('${meta[0]}','${esc(r.id)}')">Modifier</button>`:''}
         </td>
       </tr>`).join('')||`<tr><td colspan="${fields.length+1}" class="empty">Aucune donnée.</td></tr>`}
       </tbody></table></div>
