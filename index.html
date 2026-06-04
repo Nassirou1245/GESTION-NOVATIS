@@ -97,6 +97,35 @@ tr:hover td{background:#fbfdfb}
   header{position:relative}.page,.panel{padding:14px}
 }
 
+
+/* ── LOCK SCREEN ── */
+#lockScreen{position:fixed;inset:0;background:linear-gradient(135deg,#071a0e 0%,#102418 60%,#0a1f10 100%);
+  display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.lock-wrap{width:min(420px,100%);text-align:center}
+.lock-logo{width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,#2f8b61,#1a5c38);
+  display:grid;place-items:center;font-size:32px;font-weight:900;color:#fff;margin:0 auto 20px;
+  box-shadow:0 8px 32px rgba(47,139,97,.4)}
+.lock-title{font-size:26px;font-weight:800;color:#fff;margin-bottom:4px}
+.lock-sub{font-size:13px;color:#6b8c73;margin-bottom:32px}
+.lock-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;padding:28px;backdrop-filter:blur(10px)}
+.lock-tabs{display:flex;gap:8px;margin-bottom:20px;background:rgba(0,0,0,.2);
+  border-radius:10px;padding:4px}
+.lock-tab{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;
+  color:#6b8c73;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
+.lock-tab.active{background:#1f6b4a;color:#fff;box-shadow:0 2px 8px rgba(31,107,74,.4)}
+.lock-label{display:block;text-align:left;font-size:12px;font-weight:700;color:#6b8c73;
+  margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+.lock-input{width:100%;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:14px 16px;font-size:20px;color:#fff;text-align:center;
+  letter-spacing:.4em;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:6px}
+.lock-input:focus{border-color:#2f8b61}
+.lock-error{color:#ef4444;font-size:12px;min-height:18px;margin-bottom:12px}
+.lock-btn{width:100%;background:linear-gradient(135deg,#2f8b61,#1a5c38);border:none;
+  color:#fff;border-radius:10px;padding:14px;font-size:15px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:opacity .2s}
+.lock-btn:hover{opacity:.9}
+.lock-footer{margin-top:20px;font-size:11px;color:#3d5a45}
 </style>
 </head>
 <body>
@@ -127,7 +156,7 @@ tr:hover td{background:#fbfdfb}
       </div>
     </header>
 
-    <section id="setup" class="panel">
+    <section id="setup" class="panel" id="setupPanel" style="display:none">
       <h3 style="margin:0 0 6px">Connexion Supabase</h3>
       <p style="margin:0 0 12px;font-size:13px">Collez les informations du projet Supabase. Elles restent dans ce navigateur.</p>
       <div class="form">
@@ -615,7 +644,7 @@ function renderTable(){
         <div class="tools">
           <input class="search" id="tableSearch" placeholder="Rechercher…" value="${esc(searchVal)}">
           <button onclick="loadAll()">↺ Actualiser</button>
-          ${client?`<button class="primary" onclick="openForm('${meta[0]}')">+ Ajouter</button>`:''}
+          ${client&&isAdmin()?`<button class="primary" onclick="openForm('${meta[0]}')">+ Ajouter</button>`:''}
         </div>
       </div>
       <div class="tableWrap"><table><thead><tr>
@@ -808,8 +837,73 @@ window.openCaisseJournal=openCaisseJournal;window.openCaisseForm=openCaisseForm;
 window.closeCaisseSafe=closeCaisseSafe;window.saveJustification=saveJustification;
 window.openReceipt=openReceipt;window.loadAll=loadAll;
 
-initClient();
-loadAll();
+
+/* ── LOCK SCREEN ── */
+const PASS_ADMIN = '1234';
+const PASS_BOSS  = '0000';
+let lockRole = 'admin';
+let appRole  = null; // 'admin' | 'boss'
+
+function setRole(r){
+  lockRole = r;
+  document.getElementById('tabAdmin').classList.toggle('active', r==='admin');
+  document.getElementById('tabBoss').classList.toggle('active',  r==='boss');
+  document.getElementById('lockInput').value = '';
+  document.getElementById('lockError').textContent = '';
+  document.getElementById('lockInput').focus();
+}
+
+function tryUnlock(){
+  const pass = document.getElementById('lockInput').value;
+  const ok = (lockRole==='admin' && pass===PASS_ADMIN) ||
+             (lockRole==='boss'  && pass===PASS_BOSS);
+  if(ok){
+    appRole = lockRole;
+    document.getElementById('lockScreen').style.display = 'none';
+    // Update sidebar role indicator
+    const dot = document.getElementById('syncDot');
+    if(appRole==='boss'){
+      // Show boss mode indicator
+      const brand = document.querySelector('.brand');
+      const roleEl = document.createElement('div');
+      roleEl.style.cssText = 'font-size:11px;color:#f59e0b;margin-top:6px;display:flex;align-items:center;gap:6px;padding:0 10px';
+      roleEl.innerHTML = '<span style="width:7px;height:7px;border-radius:99px;background:#f59e0b;display:inline-block"></span> Direction — Lecture seule';
+      brand.appendChild(roleEl);
+    }
+    // Show setup panel only for admin
+    if(appRole==='admin'){
+      document.getElementById('setupPanel').style.display = 'block';
+    }
+    initClient();
+    loadAll();
+  } else {
+    document.getElementById('lockError').textContent = 'Mot de passe incorrect';
+    document.getElementById('lockInput').value = '';
+    document.getElementById('lockInput').focus();
+  }
+}
+
+function isAdmin(){ return appRole === 'admin'; }
+
+// Override openForm to block boss
+const _origOpenForm = window.openForm;
+window.openForm = function(table, id=''){
+  if(!isAdmin()){
+    showToast('Accès refusé — mode lecture seule','err');
+    return;
+  }
+  _origOpenForm(table, id);
+};
+
+// Show lock screen on load
+window.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('lockScreen').style.display = 'flex';
+  setTimeout(()=>{ 
+    const li = document.getElementById('lockInput');
+    if(li) li.focus();
+  }, 100);
+});
+
 
 </script>
 <script>
@@ -819,5 +913,26 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen">
+  <div class="lock-wrap">
+    <div class="lock-logo">M</div>
+    <div class="lock-title">Centre Commercial Madina</div>
+    <div class="lock-sub">NOVATIS GLOBAL SARLU — Accès sécurisé</div>
+    <div class="lock-card">
+      <div class="lock-tabs">
+        <button class="lock-tab active" id="tabAdmin" onclick="setRole('admin')">👑 Administrateur</button>
+        <button class="lock-tab" id="tabBoss" onclick="setRole('boss')">👁 Direction</button>
+      </div>
+      <label class="lock-label">Mot de passe</label>
+      <input class="lock-input" id="lockInput" type="password" maxlength="8" placeholder="••••"
+        onkeydown="if(event.key==='Enter')tryUnlock()">
+      <div class="lock-error" id="lockError"></div>
+      <button class="lock-btn" onclick="tryUnlock()">Déverrouiller</button>
+    </div>
+    <div class="lock-footer">NOVATIS ERP · Centre Commercial Madina · Conakry</div>
+  </div>
+</div>
 </body>
 </html>
