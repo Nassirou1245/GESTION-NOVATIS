@@ -62,7 +62,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(
 @media print{
   aside,header,.panel,.pageToolbar,.tools,.rowActions,.heroPanel,.quickGrid{display:none!important}
   body{display:block;background:#fff;color:#000}
-  .page{display:none!important}.page.active{display:block;padding:0}
+  .page{display:none!important}.page.active{display:block!important;padding:0}
   .card{box-shadow:none;border:0}.receiptBox{border:1px solid #000;max-width:520px;margin:0 auto}
   /* Receipt-only print: hide payments list, show only the receipt box */
   body.receipt-print .receiptGrid>div:first-child{display:none!important}
