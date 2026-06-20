@@ -1,0 +1,15 @@
+{
+  "name": "npms-enterprise-pwa",
+  "private": true,
+  "version": "4.2.0",
+  "description": "NOVATIS Property Management System — Centre Commercial Madina",
+  "type": "commonjs",
+  "scripts": {
+    "build":  "node build.js",
+    "verify": "node scripts/verify-build.cjs",
+    "dev":    "node build.js && npx serve . -p 3000"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

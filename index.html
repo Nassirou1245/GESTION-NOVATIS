@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f2218">
+  <meta name="description" content="NOVATIS Property Management System — Gestion immobilière Centre Commercial Madina">
+  <meta name="robots" content="noindex, nofollow">
+  <title>NPMS Enterprise — NOVATIS</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- config.js is generated at build time and sets window.__NPMS_CONFIG__     -->
+  <!-- It is never committed to source control (see .gitignore)                 -->
+  <script src="config.js"></script>
+</head>
+<body>
+  <aside>
+    <div class="brand">
+      <div class="mark">N</div>
+      <div>
+        <h1>NPMS Enterprise</h1>
+        <p>NOVATIS GLOBAL — Property ERP</p>
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sync" id="syncState">Chargement…</div>
+  </aside>
+
+  <main>
+    <header>
+      <div>
+        <h2 id="pageTitle">Tableau de bord</h2>
+        <small id="pageSub">Gestion immobilière</small>
+      </div>
+      <div class="actions">
+        <button id="langToggleBtn">EN</button>
+        <button id="loginBtn">Connexion</button>
+        <button id="logoutBtn" class="hidden">Déconnexion</button>
+      </div>
+    </header>
+
+    <section id="dashboard" class="page active"></section>
+    <section id="tablePage" class="page"></section>
+  </main>
+
+  <div class="modalBack" id="modalBack">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
