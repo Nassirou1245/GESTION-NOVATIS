@@ -1963,10 +1963,15 @@ function receiptHtml(p){
     </div>
     <p class="receiptFootNote">${t('officialDoc')} ${esc(PROPERTY.company)}.<br>${t('keepRecord')}</p>
     <div class="receiptFoot">
-      <button onclick="window.print()">🖨 ${t('print')}</button>
-      <button onclick="window.print()">📄 ${t('pdf')}</button>
+      <button onclick="printReceiptPage()">🖨 ${t('print')}</button>
+      <button onclick="printReceiptPage()">📄 ${t('pdf')}</button>
     </div>
   </div>`;
+}
+function printReceiptPage(){
+  document.body.classList.add('receipt-print');
+  window.print();
+  document.body.classList.remove('receipt-print');
 }
 function receiptRow(label,value){ return `<div class="receiptRow"><span>${esc(label)}</span><b>${esc(String(value||'—'))}</b></div>`; }
 function previewReceipt(id){ const p=(rows.paiements||[]).find(x=>x.id===id); const box=el('receiptPreview'); if(box) box.innerHTML=receiptHtml(p); }

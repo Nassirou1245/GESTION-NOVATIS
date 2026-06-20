@@ -61,5 +61,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(
 @media(max-width:1050px){body{grid-template-columns:1fr}aside{height:auto;position:relative}.stats,.two,.quickGrid{grid-template-columns:1fr}.pageToolbar,.heroPanel{flex-direction:column;align-items:stretch}.heroActions{justify-content:flex-start}.panel,.page{padding:14px}header{position:relative;align-items:flex-start}.formGrid{grid-template-columns:1fr}.barRow{grid-template-columns:1fr}.barRow em{text-align:left}}
 @media print{
   aside,header,.panel,.pageToolbar,.tools,.rowActions,.heroPanel,.quickGrid{display:none!important}
-  body{display:block;background:#fff;color:#000}.page,.page.active{display:block;padding:0}.card{box-shadow:none;border:0}.receiptBox{border:1px solid #000;max-width:520px;margin:0 auto}
+  body{display:block;background:#fff;color:#000}
+  .page{display:none!important}.page.active{display:block;padding:0}
+  .card{box-shadow:none;border:0}.receiptBox{border:1px solid #000;max-width:520px;margin:0 auto}
+  /* Receipt-only print: hide payments list, show only the receipt box */
+  body.receipt-print .receiptGrid>div:first-child{display:none!important}
+  body.receipt-print .receiptGrid{display:block!important}
+  body.receipt-print #receiptPreview{width:100%!important}
+  body.receipt-print .receiptFoot{display:none!important}
 }
