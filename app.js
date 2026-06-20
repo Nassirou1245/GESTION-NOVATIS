@@ -594,10 +594,9 @@ const READ_GRANTS = {
   Comptable:      ['dashboard','rent','receipts','toilets','finance','dailyclosing','boardreport','reports','data'],
   'Agent terrain':['dashboard','spaces','tenants','rent','receipts','toilets','maintenance','alerts'],
   Caissier:       ['dashboard','rent','receipts','toilets'],
-  // Viewer = PDG/business owner oversight role: sees everything operational and financial,
-  // including the daily closing summary and the board-level monthly/quarterly report,
-  // but never Users & Roles, Data & Backup, or Settings — and never gets write access (see WRITE_GRANTS below)
-  Viewer:         ['dashboard','spaces','tenants','contracts','rent','receipts','toilets','finance','dailyclosing','boardreport','reports','maintenance','alerts']
+  // Viewer = PDG/executive read-only: full visibility across all business and financial
+  // modules including activity logs. Zero write access — see WRITE_GRANTS below.
+  Viewer:         ['dashboard','spaces','tenants','contracts','rent','receipts','toilets','finance','dailyclosing','boardreport','reports','maintenance','alerts','users']
 };
 const WRITE_GRANTS = {
   'Super Admin':  ['*'],
@@ -1187,8 +1186,8 @@ function renderFinance(){
     <div class="pageToolbar"><div><h3>${t('financeTitle')}</h3><p>${t('financeSub')}</p></div><div class="tools"><button onclick="exportCurrentCsv('finance')">📥 ${t('exportJson').replace('JSON','CSV')}</button><button onclick="window.print()">🖨 ${t('pdf')}</button></div></div>
     <div class="grid stats">${stat(t('rentRevenue'),money(m.rentPaid),t('confirmed'))}${stat(t('wcTotal'),money(m.wcTotal),t('toilets'))}${stat(t('additionalRevenue'),money(m.other),t('otherRevenue'))}${stat(t('expenses'),money(m.out),t('opCosts'))}</div>
     <div class="grid stats">${stat(t('cashRegister'),money(actualCash),t('actualCash'))}${stat(t('bankBalance'),money(bankBal),t('movementBal'))}${stat(t('bankDeposits'),money(sum(deposits,'montant')),t('preparedPosted'))}${stat(t('reconcGaps'),money(sum(cash,'ecart')),t('cashVariance'),sum(cash,'ecart')?'risk':'')}</div>
-    <div class="grid two"><div class="card section"><div class="sectionHead"><h3>${t('expensesTitle')}</h3><button onclick="openForm('depenses')">${t('add')}</button></div>${genericTable('depenses')}</div><div class="card section"><div class="sectionHead"><h3>${t('cashClose')}</h3><button onclick="openForm('caisse')">${t('add')}</button></div>${genericTable('caisse')}</div></div>
-    <div class="card section"><div class="sectionHead"><h3>${t('bankDepositsTitle')}</h3><button onclick="openForm('depots')">${t('add')}</button></div>${genericTable('depots')}</div>
+    <div class="grid two"><div class="card section"><div class="sectionHead"><h3>${t('expensesTitle')}</h3>${can(current,'write')?`<button onclick="openForm('depenses')">${t('add')}</button>`:''}</div>${genericTable('depenses')}</div><div class="card section"><div class="sectionHead"><h3>${t('cashClose')}</h3>${can(current,'write')?`<button onclick="openForm('caisse')">${t('add')}</button>`:''}</div>${genericTable('caisse')}</div></div>
+    <div class="card section"><div class="sectionHead"><h3>${t('bankDepositsTitle')}</h3>${can(current,'write')?`<button onclick="openForm('depots')">${t('add')}</button>`:''}</div>${genericTable('depots')}</div>
   `;
 }
 
